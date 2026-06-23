@@ -8,3 +8,7 @@
 
 # Runtime logs from headless / scheduled skill runs
 .brain/
+
+# Python bytecode
+__pycache__/
+*.pyc
