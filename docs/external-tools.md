@@ -136,6 +136,15 @@ instant and auditable").
 > `bin/brain-validate.sh` to validate, `--quiet` for FAIL/WARN only, `--install-hook`
 > to symlink the pre-commit guard. Exit 1 on any FAIL; dangling `[[links]]` are WARN
 > only. Validated clean against the current repo (9 files, 0 fail).
+>
+> **Upgraded 2026-06-23 → `tidy` SDK.** The checks now live in `bin/brain_tidy.py`
+> (stdlib-only, importable + CLI; the single source of truth), and `brain-validate.sh`
+> is a thin shim that delegates to it. `tidy` adds the **safe auto-fix** half (`--fix`:
+> clamp `updated<created`, case-only wikilink repair, frontmatter list spacing — nothing
+> that needs judgment, and never writes `sources/`) and a deterministic `--backlog`
+> (sources lacking a recap). SDK: `find_violations()`, `fix()`, `backlog()`. The nightly
+> `brain-sync.sh` now runs `tidy --fix` then calls `claude -p /sync` *only if the backlog
+> is non-empty*. Rationale in [docs/adr/0001](adr/0001-deterministic-tidy-sdk.md).
 
 
 **Problem.** The schema in `CLAUDE.md` is currently enforced only by my discretion

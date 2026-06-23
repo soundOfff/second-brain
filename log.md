@@ -153,3 +153,36 @@ Format:
 - not run on this machine / not committed — the user runs `bin/brain-clip-gui.sh install`
   to deploy (builds the app, loads the two agents, installs the Service, creates the
   inbox). Left for the user, consistent with the scheduler.
+
+## 2026-06-23 — `tidy` SDK (deterministic maintenance, outside Claude)
+
+Design settled via /grill-with-docs ("can we make an SDK to run tidy or sync outside of
+Claude"), then built.
+
+- **Key finding.** The Claude Agent SDK can't be the answer: it requires a per-token
+  `ANTHROPIC_API_KEY` and may not reuse the Claude Code subscription/OAuth — which is the
+  only auth the user has. And `sync` is synthesis (needs an LLM), so it can't leave Claude
+  in any real sense. Conclusion: only the **mechanical** half can run outside Claude.
+- **Built `bin/brain_tidy.py`** — stdlib-only, importable SDK + CLI; the single source of
+  truth for deterministic schema checks. SDK: `find_violations()`, `fix()`, `backlog()`.
+  CLI: default check (exit 1 on FAIL), `--quiet`, `--fix`, `--backlog`, `--json`.
+  - Ports every check from the old shell validator into structured `Violation` objects.
+  - Adds the **safe-fix** half (only these three): clamp `updated<created`, case-only
+    wikilink repair (unique case-insensitive match; alias/anchor preserved; skips inline
+    code), frontmatter list-spacing. Never writes `sources/`. Reports — never fixes —
+    anything needing judgment (missing keys, fuzzy typos, bad type/status, stubs, dupes).
+  - Existence checks are **case-sensitive via a page index**, not `Path.is_file()` —
+    macOS's case-insensitive FS otherwise hid wrong-case links and killed the case-fix.
+- **`bin/brain-validate.sh` → thin shim** that execs `brain_tidy.py` (keeps the
+  pre-commit hook + `--install-hook` working; no second validator to drift).
+- **`bin/brain-sync.sh` rewired**: run `tidy --fix` first, then invoke `claude -p /sync`
+  **only if `--backlog` is non-empty** — mechanical cleanup is free, tokens spent only on
+  real synthesis work.
+- **Docs.** Added `docs/adr/0001-deterministic-tidy-sdk.md` (why the boundary), `CONTEXT.md`
+  glossary (tidy / sync / backlog / judgment-vs-mechanical / "outside of Claude"), and
+  updated `docs/external-tools.md` tool #3.
+- **Verified.** `py_compile` clean; real vault validates 0 fail (parity with old shim) and
+  `--backlog` lists the 2 unprocessed sources. Scratch vault with deliberate breakage:
+  all checks fire, the three fixes apply correctly, re-running `--fix` is idempotent,
+  the immutable bad-`id` source is reported not touched, an in-code `[[link]]` is left
+  alone. `zsh -n` clean on both shell scripts; pre-commit hook + `--install-hook` work.
