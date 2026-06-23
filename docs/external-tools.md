@@ -86,7 +86,13 @@ instant and auditable").
 
 ---
 
-## 3. Contract validator — keep the brain VALID without me
+## 3. Contract validator — keep the brain VALID without me  ✅ BUILT 2026-06-23
+
+> Shipped as `bin/brain-validate.sh` (+ `bin/hooks/pre-commit`). Run
+> `bin/brain-validate.sh` to validate, `--quiet` for FAIL/WARN only, `--install-hook`
+> to symlink the pre-commit guard. Exit 1 on any FAIL; dangling `[[links]]` are WARN
+> only. Validated clean against the current repo (9 files, 0 fail).
+
 
 **Problem.** The schema in `CLAUDE.md` is currently enforced only by my discretion
 during `/lint`. On unattended headless runs (`claude -p --permission-mode
