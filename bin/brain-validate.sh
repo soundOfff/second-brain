@@ -21,6 +21,16 @@ setopt null_glob
 VAULT="${0:A:h:h}"
 cd "$VAULT" || { print -u2 "ERROR: cannot cd to $VAULT"; exit 2; }
 
+# Symlink the repo's pre-commit hook into .git/hooks (repo = source of truth).
+if [[ "${1:-}" == "--install-hook" ]]; then
+  hookdir="$VAULT/.git/hooks"
+  [[ -d "$VAULT/.git" ]] || { print -u2 "ERROR: $VAULT is not a git repo"; exit 2; }
+  mkdir -p "$hookdir"
+  ln -sf "../../bin/hooks/pre-commit" "$hookdir/pre-commit"
+  print -r -- "installed pre-commit hook -> bin/hooks/pre-commit"
+  exit 0
+fi
+
 QUIET=0
 [[ "${1:-}" == "--quiet" ]] && QUIET=1
 
