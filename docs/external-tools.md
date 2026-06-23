@@ -63,7 +63,16 @@ design — I clean it up in the recap, not the clipper.
 
 ---
 
-## 2. Wiki server — get synthesis OUT to a reader
+## 2. Wiki server — get synthesis OUT to a reader  ✅ BUILT 2026-06-23
+
+> Shipped as `bin/brain-serve.py` (+ `bin/brain-serve.sh` launcher). Run
+> `bin/brain-serve.sh [port]` (default 8765) → browse at `http://127.0.0.1:<port>`.
+> Stdlib-only, read-only, no LLM; re-reads files per request so edits show live.
+> Resolves `[[wikilinks]]` and `[src-id]` citations into navigation, renders a
+> per-page **Linked from** backlinks panel and a **Sources** panel, links citations to
+> the immutable raw source (`/source/<id>` with a **Cited by** panel), shows `stub`
+> badges in the sidebar, and styles dangling links red. Smoke-tested across all routes.
+
 
 **Problem.** The wiki is raw `.md` on disk. Reading it = opening files; `[[wikilinks]]`
 don't resolve; the source→recap→concept graph is invisible.

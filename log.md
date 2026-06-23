@@ -73,3 +73,18 @@ Format:
   the dangling-link WARN fired correctly.
 - docs: marked tool #3 as BUILT in docs/external-tools.md. Tools #1 (capture bridge) and
   #2 (wiki server) remain proposed.
+
+## 2026-06-23 — infra: wiki server (external tool #2 of docs/external-tools.md)
+- bin: created `bin/brain-serve.py` (stdlib-only, Python 3) + `bin/brain-serve.sh`
+  launcher. Read-only local HTTP server over wiki/**.md + index.md: minimal markdown
+  renderer (headings, lists, blockquotes, bold/italic, inline+fenced code), resolves
+  [[wikilinks]] → /wiki/<path> navigation (dangling → red .missing), [src-id] citations
+  → /source/<id> view of the immutable raw source. Per-page "Linked from" backlinks and
+  "Sources" panels; source pages show a "Cited by" panel; sidebar groups pages by folder
+  with stub badges. No writes, no LLM; re-reads files per request so edits show live.
+- verification: smoke-tested all routes (index/wiki/source/404) via curl — wikilinks,
+  citations, backlinks, and the Cited-by reverse index all resolve. Visually confirmed
+  the rendered page in-browser (screenshot).
+- docs: marked tool #2 BUILT in docs/external-tools.md. Only tool #1 (capture bridge)
+  remains proposed.
+- not committed yet — awaiting user.
