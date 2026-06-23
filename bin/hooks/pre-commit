@@ -1,0 +1,4 @@
+#!/bin/zsh
+# Second Brain pre-commit guard: reject commits that break the CLAUDE.md schema.
+# Installed (symlinked) by: bin/brain-validate.sh --install-hook
+exec "$(git rev-parse --show-toplevel)/bin/brain-validate.sh" --quiet
