@@ -24,4 +24,7 @@ fi
 
 n="$(print -r -- "$backlog" | grep -c .)"
 echo "[$(ts)] SYNC: $n unprocessed source(s) — invoking Claude /sync." >>"$LOG"
-exec "$VAULT/bin/brain-run.sh" "Run the /sync skill to reconcile any unprocessed sources into the wiki, then stop. If there is no backlog, do nothing and say so."
+"$VAULT/bin/brain-run.sh" "Run the /sync skill to reconcile any unprocessed sources into the wiki, then stop. If there is no backlog, do nothing and say so. Do NOT git commit or push — leave the changes in the working tree."
+
+# 3. Open a PR with whatever the brain wrote, for the human to review and merge.
+exec "$VAULT/bin/brain-pr.sh" sync
