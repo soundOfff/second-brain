@@ -210,3 +210,26 @@ Claude"), then built.
 - **Index updated.** Added a "Tools & providers" entity subsection, the fallback-strategy
   concept, and a Recently-updated entry.
 - **No contradictions** (single-source batch). Verified: `--backlog` now empty.
+
+## 2026-06-23 — design: pull feeder (external tool #4 of docs/external-tools.md)
+
+Froze the design for a fourth external-but-matched tool via a `/grill-me` session. No
+code written — spec only.
+
+- **What.** `brain-feed` — a deterministic, once-daily *pull* poller (vs #1's *push*
+  clip). Subscribes to feeds, deposits new material unattended, reuses #1's renderer for
+  the actual deposit; the 02:00 `/sync` folds it in.
+- **Core tension resolved.** A scheduled poller contradicts "capture deliberately." Fix:
+  move the deliberate act from *per-item* to *per-subscription* via **per-feed trust**
+  (`auto` → straight to `sources/`; `queue` → review pen) plus a **per-feed daily cap**
+  (overflow deferred, lossless — bounded throughput stops any feed flooding the brain).
+- **Adapters.** `rss` (universal substrate) + `list` (drain a to-read md) are pure
+  stdlib; `yt` (yt-dlp captions) + `email` (IMAP, Keychain app-password) are optional
+  with graceful degradation, preserving bin/'s "runs anywhere, no keys" property.
+- **State/config.** `.brain/feed-state.db` (sqlite, gitignored) for seen GUIDs + daily
+  counts; `feeds.toml` (committed, stdlib tomllib) as the curation surface. Review via
+  `brain-feed review` (interactive k/d/s). Provenance `via:` frontmatter; corpus dedup
+  on `url:`.
+- **Decisions captured in** `docs/external-tools.md` §4 (status: DESIGNED, NOT BUILT) +
+  build-order entry #4. Build deferred — it depends on #1 (deposit) and #3 (guard),
+  both already shipped.
