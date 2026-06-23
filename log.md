@@ -186,3 +186,27 @@ Claude"), then built.
   all checks fire, the three fixes apply correctly, re-running `--fix` is idempotent,
   the immutable bad-`id` source is reported not touched, an in-code `[[link]]` is left
   alone. `zsh -n` clean on both shell scripts; pre-commit hook + `--install-hook` work.
+
+---
+
+## 2026-06-23 — /sync (1 source + 1 skip-marker)
+
+**Backlog reconciled.** Two sources were unprocessed; one was test noise.
+
+- **Skip-marker.** `2026-06-23-testing-from-extension` (body: "Testing from extension",
+  url `chrome://extensions/`) was a capture-extension smoke test. Sources are immutable,
+  so rather than delete it, wrote a stub recap
+  `wiki/recaps/2026-06-23-testing-from-extension.md` (`status: stub`, tags
+  `[test-artifact, ignore]`) to drop it from the backlog and tell `/sync` + `/digest` not
+  to ripple it. This kept tonight's 02:00 auto-sync from synthesizing junk into the wiki.
+- **Real source reconciled.** `2026-06-23-one-that-sticks-with-me-i-had-to-build-a-cleanup-function-fo`
+  — a first-person war story: a note-cleanup feature on a single Groq model, no fallback,
+  went down overnight (Sentry flood, users affected); fixed with a second model, then
+  migrated to OpenRouter for redundancy. This is the brain's first piece of personal
+  engineering knowledge (prior pages were all meta, about the wiki method itself).
+- **Pages written:** recap; new concept `concepts/llm-fallback-strategy` (`active`,
+  aliases: model fallback / model redundancy / provider redundancy); new entity stubs
+  `entities/groq`, `entities/openrouter`, `entities/sentry`.
+- **Index updated.** Added a "Tools & providers" entity subsection, the fallback-strategy
+  concept, and a Recently-updated entry.
+- **No contradictions** (single-source batch). Verified: `--backlog` now empty.

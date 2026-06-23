@@ -36,14 +36,25 @@ The human entry point into the wiki. The agent keeps this current as pages are a
 - [[entities/claude-code]] — the AI engine that maintains this brain
 - [[entities/obsidian]] — markdown vault for the wiki
 
+### Tools & providers (from engineering notes)
+
+- [[entities/groq]] — LLM inference provider (single point of failure in one incident)
+- [[entities/openrouter]] — multi-provider routing gateway, adopted for model redundancy
+- [[entities/sentry]] — error monitoring that surfaced an LLM outage
+
 ## Top concepts
 
 - [[concepts/llm-wiki]] — let an LLM own and maintain the knowledge base
 - [[concepts/second-brain]] — durable external knowledge store
 - [[concepts/retrieval-augmented-generation]] — the query-time alternative (stub)
+- [[concepts/llm-fallback-strategy]] — plan for when your primary model/provider is down
 
 ## Recently updated
 
+- 2026-06-23 — reconciled an engineering war story
+  ([[recaps/2026-06-23-one-that-sticks-with-me-i-had-to-build-a-cleanup-function-fo]]): a
+  single-model Groq feature failed with no fallback. Added the
+  [[concepts/llm-fallback-strategy]] concept and the Groq / OpenRouter / Sentry entities.
 - 2026-06-23 — seeded the brain by capturing the founding article
   ([[recaps/2026-06-23-karpathy-llm-wiki]]): added the LLM Wiki, Second Brain, and RAG
   concepts and the Karpathy / Claude Code / Obsidian entities.
