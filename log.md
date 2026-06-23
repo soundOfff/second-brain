@@ -45,3 +45,31 @@ Format:
   NOT performed — the auto-approval classifier blocked loading agents that run
   `claude -p --permission-mode bypassPermissions`. User must run
   `bin/brain-schedule.sh install` themselves to activate the schedule.
+
+## 2026-06-23 — proposal: external-but-matched companion tools
+- docs: created `docs/external-tools.md` — design spec for three companion tools that
+  live outside the internal skills but bind to the CLAUDE.md contract: (1) capture
+  bridge (`bin/brain-clip.sh` + share-sheet/extension to land valid-frontmatter sources
+  from anywhere → nightly /sync folds them in), (2) wiki server (local read-only
+  renderer that resolves [[wikilinks]] + backlinks, no LLM at read time), (3) contract
+  validator (`bin/brain-validate.sh` pre-commit/CI guard for frontmatter, slugs,
+  citations, dangling links).
+- framing: tools map to the three sides of the brain — IN / OUT / INTEGRITY — and form a
+  pipeline (#1 feeds → #3 guards → #2 serves). Recommended build order: #3, #1, #2.
+- no code written yet; user requested spec-only via /whats-next.
+
+## 2026-06-23 — infra: contract validator (external tool #3 of docs/external-tools.md)
+- bin: created `bin/brain-validate.sh` — deterministic guard for the CLAUDE.md schema.
+  Checks (FAIL): required source/wiki frontmatter keys, source `id` == filename stem,
+  type/status enums, kebab-case slugs, dates parse, `updated >= created`, frontmatter
+  `sources:` entries and inline `[src-id]` citations resolve to real files in sources/.
+  Dangling `[[wikilinks]]` are WARN only (CLAUDE.md allows them). Strips inline `code`
+  and `[[links]]` before citation scan so documented examples aren't flagged. Flags:
+  `--quiet`, `--install-hook`. Exit 1 on any FAIL.
+- bin: created `bin/hooks/pre-commit` (version-controlled); `--install-hook` symlinks it
+  into .git/hooks (repo = source of truth, mirroring brain-schedule). Hook installed.
+- verification: passes clean on the live repo (9 files, 0 fail, 0 warn). Tested against a
+  throwaway broken fixture in scratchpad (NOT in sources/) — all 9 FAIL conditions and
+  the dangling-link WARN fired correctly.
+- docs: marked tool #3 as BUILT in docs/external-tools.md. Tools #1 (capture bridge) and
+  #2 (wiki server) remain proposed.
