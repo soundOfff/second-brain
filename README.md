@@ -47,9 +47,31 @@ headlessly in this vault:
 - **nightly 02:00** → `/sync` reconciles any new sources,
 - **Mondays 09:00** → `/digest` writes the weekly synthesis.
 
+Unattended runs **never write to `main`**. Each one validates its output, then opens a
+pull request (`brain/sync-…` / `brain/digest-…`) for you to review and merge — so you
+always read the synthesized content before it lands. If validation fails, the edits are
+left uncommitted and the failure is logged instead of pushed. Merge these PRs promptly:
+a source stays "unprocessed" until its recap is on `main`, so an unmerged sync PR will
+be reconciled again on the next run.
+
 Plists live in `bin/launchd/` (symlinked into `~/Library/LaunchAgents/`); every run is
 logged to `.brain/cron.log`. Check state with `bin/brain-schedule.sh status`, fire one
 now with `bin/brain-schedule.sh run sync`, or remove them with `… uninstall`.
+
+## Local tooling (`bin/`)
+
+Deterministic helpers — no LLM, no tokens — that surround the agent:
+
+- **Validate / tidy** — `bin/brain-validate.sh` checks every page against the
+  `CLAUDE.md` schema (frontmatter, kebab-case slugs, citations); `bin/brain_tidy.py
+  --fix` applies the safe fixes. `… --install-hook` adds a pre-commit guard so broken
+  pages can't be committed.
+- **Capture from anywhere** — `bin/brain-clip.sh <url | file | text>` lands raw
+  material into `sources/` with valid frontmatter; `bin/brain-clip-watch.sh` ingests
+  anything dropped into a watched inbox folder.
+- **Read the wiki in a browser** — `bin/brain-serve.sh [port]` renders `wiki/` and
+  `index.md` read-only, resolving wikilinks, citations, and backlinks, and surfacing
+  stubs and dangling links.
 
 ## Getting started
 
