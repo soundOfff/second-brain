@@ -1,0 +1,47 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+  <!--
+    Second Brain — weekly synthesis digest.
+    Runs brain-digest.sh every Monday at 09:00 (Weekday 1). launchd
+    re-fires a missed StartCalendarInterval job when the Mac next wakes.
+    Managed via bin/brain-schedule.sh.
+  -->
+  <key>Label</key>
+  <string>com.secondbrain.digest</string>
+
+  <key>ProgramArguments</key>
+  <array>
+    <string>/bin/zsh</string>
+    <string>/Users/User/Tomi/second-brain/bin/brain-digest.sh</string>
+  </array>
+
+  <key>StartCalendarInterval</key>
+  <dict>
+    <key>Weekday</key><integer>1</integer>
+    <key>Hour</key><integer>9</integer>
+    <key>Minute</key><integer>0</integer>
+  </dict>
+
+  <key>RunAtLoad</key>
+  <false/>
+
+  <key>EnvironmentVariables</key>
+  <dict>
+    <key>PATH</key>
+    <string>/Users/User/.local/bin:/usr/local/bin:/usr/bin:/bin</string>
+  </dict>
+
+  <key>WorkingDirectory</key>
+  <string>/Users/User/Tomi/second-brain</string>
+
+  <key>StandardOutPath</key>
+  <string>/Users/User/Tomi/second-brain/.brain/launchd.digest.log</string>
+  <key>StandardErrorPath</key>
+  <string>/Users/User/Tomi/second-brain/.brain/launchd.digest.log</string>
+
+  <key>ProcessType</key>
+  <string>Background</string>
+</dict>
+</plist>

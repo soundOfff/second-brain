@@ -1,0 +1,10 @@
+# OS / editor cruft
+.DS_Store
+*.swp
+.obsidian/workspace*
+
+# Claude Code local
+.claude/settings.local.json
+
+# Runtime logs from headless / scheduled skill runs
+.brain/
