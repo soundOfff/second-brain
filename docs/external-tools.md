@@ -1,6 +1,6 @@
 # External-but-Matched Tools — Design Spec
 
-Status: **proposal** · Created: 2026-06-23
+Status: **all three built** · Created: 2026-06-23 · Last built: 2026-06-23 (#1 capture bridge)
 
 Three companion tools that live *outside* the brain's internal skills (`/capture`,
 `/sync`, `/lint`, `/digest`, `/remember`) but bind to the **same contract** defined in
@@ -33,7 +33,26 @@ result.**
 
 ---
 
-## 1. Capture bridge — get material IN from the wild
+## 1. Capture bridge — get material IN from the wild  ✅ BUILT 2026-06-23
+
+> Shipped as `bin/brain-clip.sh`. Deterministic, no-LLM front door (curl + python3
+> stdlib only) that deposits ONE raw, immutable source into `sources/` with valid
+> frontmatter — then stops. The nightly `/sync` folds it in. Three modes, auto-detected
+> from the argument:
+> - **URL** → `curl` fetch + a stdlib `HTMLParser` readability pass → `type: article`
+>   markdown (title/author pulled from `og:`/`<title>`/`meta[author]`); nav/script/style
+>   stripped.
+> - **File** → text files (`.md/.txt/...`) inlined as a markdown source; binaries
+>   (PDF/image/data) copied in as-is with a `<stem>.meta.md` sidecar; `type` inferred
+>   from extension.
+> - **Text / stdin** (`-`) → `type: note`.
+>
+> Slugifies the title to a date-prefixed kebab `id`, dedupes (`-2`, `-3`) on collision,
+> and after writing runs the contract validator (tool #3) on what it produced — so #3
+> guards what #1 feeds. Flags: `--type --title --author --url --dry-run`. Distinct from
+> `bin/brain-capture.sh`, which invokes the full LLM `/capture` ripple; the clipper is
+> the cheap, key-free, share-sheet-able deposit. Verified across all three modes +
+> dedupe against a throwaway vault; extraction smoke-tested on real articles.
 
 **Problem.** A source only enters the brain if someone hand-drops a correctly-
 frontmattered file into `sources/`. That's the real bottleneck: capture requires being
@@ -44,12 +63,28 @@ wiki) is starved by it.
 `sources/` with valid frontmatter — and nothing else. It does **zero synthesis**; the
 launchd `/sync` already scheduled for 02:00 folds it into the wiki.
 
-Surfaces, cheapest → richest:
-- `bin/brain-clip.sh <url>` — fetch a page, derive `id` from date + slug, write
-  `sources/<id>.md` with frontmatter + extracted text.
-- macOS Shortcut / iOS share-sheet → calls the script (or drops to a watched folder).
-- Browser extension "Clip to brain" button.
-- `email-to-source`: a watched mailbox; forwarded mail becomes a `type: note` source.
+Surfaces, cheapest → richest (✅ = built):
+- ✅ `bin/brain-clip.sh <url|file|"text">` — the deterministic core (above).
+- ✅ **Clip to Brain.app** — an AppleScript app (built with `osacompile` into
+  `~/Applications`). Double-click → clips the clipboard / a URL (or prompts); drag
+  files & PDFs onto it. Source: `bin/gui/clip-to-brain.applescript`.
+- ✅ **Watched inbox folder** — `~/Brain Inbox`; a launchd `WatchPaths` agent
+  (`com.secondbrain.clip`) runs `bin/brain-clip-watch.sh` on every drop (resolving
+  `.webloc`/`.url` links to URLs), then archives the original to `_done/`. This is the
+  share-sheet "Save to folder" target.
+- ✅ **Right-click Service** — an Automator Quick Action
+  (`bin/gui/clip-service/Clip to Brain.workflow`) installed to `~/Library/Services`:
+  select text/a link anywhere → right-click → Services → "Clip to Brain".
+- ✅ **Browser button** — an unpacked Chrome extension (`bin/gui/chrome-extension`)
+  whose toolbar popup POSTs the current tab to a localhost helper
+  (`bin/brain-clip-server.py`, kept alive by the `com.secondbrain.clipserver` agent),
+  which shells out to `brain-clip.sh`.
+
+All five deploy via **`bin/brain-clip-gui.sh install`** (or `app|folder|service|browser`
+individually; `status`; `uninstall [which]`), mirroring `bin/brain-schedule.sh`. The
+launchd agents here run plain shell/python — no `claude`, no `bypassPermissions` — so
+unlike the sync/digest agents they carry no special-privilege caveat.
+- `email-to-source` (a watched mailbox) remains a future surface.
 
 **MVP.** `bin/brain-clip.sh`:
 1. Slugify title → `YYYY-MM-DD-<slug>`, dedupe if exists.

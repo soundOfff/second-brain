@@ -1,0 +1,50 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+  <!--
+    Second Brain — watched-inbox capture bridge.
+    Fires bin/brain-clip-watch.sh whenever the contents of ~/Brain Inbox change
+    (a Finder drag, or a share-sheet "Save to folder" pointed there). Each dropped
+    file is deposited into sources/ via brain-clip.sh, then archived to _done/.
+    RunAtLoad sweeps anything already waiting. Managed via bin/brain-clip-gui.sh.
+  -->
+  <key>Label</key>
+  <string>com.secondbrain.clip</string>
+
+  <key>ProgramArguments</key>
+  <array>
+    <string>/bin/zsh</string>
+    <string>/Users/User/Tomi/second-brain/bin/brain-clip-watch.sh</string>
+    <string>/Users/User/Brain Inbox</string>
+  </array>
+
+  <key>WatchPaths</key>
+  <array>
+    <string>/Users/User/Brain Inbox</string>
+  </array>
+
+  <key>RunAtLoad</key>
+  <true/>
+
+  <key>ThrottleInterval</key>
+  <integer>5</integer>
+
+  <key>EnvironmentVariables</key>
+  <dict>
+    <key>PATH</key>
+    <string>/opt/homebrew/bin:/Users/User/.local/bin:/usr/local/bin:/usr/bin:/bin</string>
+  </dict>
+
+  <key>WorkingDirectory</key>
+  <string>/Users/User/Tomi/second-brain</string>
+
+  <key>StandardOutPath</key>
+  <string>/Users/User/Tomi/second-brain/.brain/launchd.clip.log</string>
+  <key>StandardErrorPath</key>
+  <string>/Users/User/Tomi/second-brain/.brain/launchd.clip.log</string>
+
+  <key>ProcessType</key>
+  <string>Background</string>
+</dict>
+</plist>

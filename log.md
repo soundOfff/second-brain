@@ -88,3 +88,68 @@ Format:
 - docs: marked tool #2 BUILT in docs/external-tools.md. Only tool #1 (capture bridge)
   remains proposed.
 - not committed yet — awaiting user.
+
+## 2026-06-23 — infra: capture bridge (external tool #1 of docs/external-tools.md)
+- bin: created `bin/brain-clip.sh` — the deterministic, no-LLM front door that lands ONE
+  raw, immutable source into `sources/` with valid frontmatter, then stops (nightly
+  `/sync` folds it in). Dependency-light (curl + python3 stdlib) so it can run from a
+  macOS Shortcut / iOS share-sheet / browser button / cron with no API key. Three
+  auto-detected modes: URL → curl fetch + stdlib `HTMLParser` readability extract →
+  `type: article` markdown (title/author from `og:`/`<title>`/`meta`); FILE → text files
+  inlined as markdown source, binaries (pdf/image/data) copied as-is + `<stem>.meta.md`
+  sidecar, type by extension; TEXT/stdin (`-`) → `type: note`. Slugifies to a
+  date-prefixed kebab `id`, dedupes (`-2`,`-3`) on collision, then runs the contract
+  validator (tool #3) on its own output (#3 guards what #1 feeds). Flags: `--type
+  --title --author --url --dry-run`. Distinct from `bin/brain-capture.sh` (full LLM
+  ripple) — the clipper only deposits.
+- verification: built and tested against a throwaway fakevault in scratchpad (never the
+  immutable real `sources/`). Confirmed all three modes + dedupe, flags-anywhere parsing
+  (incl. flags after the path), bad-`--type` rejection, empty-input guard; extraction
+  smoke-tested on real pages (example.com + the askglitch seed article, ~15KB clean
+  markdown, title+author resolved). Validator passes on every written source (0 fail).
+  Real repo still 9 files / 0 fail; real `sources/` left pristine.
+- docs: marked tool #1 BUILT in docs/external-tools.md; updated the status line to
+  "all three built". The IN/INTEGRITY/OUT pipeline is now complete in code.
+- not committed yet — awaiting user.
+
+## 2026-06-23 — infra: capture-bridge GUI surfaces + brain-clip.sh cwd bugfix
+- bin: created `bin/brain-clip-gui.sh` — one installer (mirrors brain-schedule.sh:
+  install/app/folder/service/browser/status/uninstall) deploying four GUI front ends,
+  all of which funnel into `bin/brain-clip.sh`:
+  1. **Clip to Brain.app** — `bin/gui/clip-to-brain.applescript`, built via `osacompile`
+     into ~/Applications. Double-click clips the clipboard/URL (or prompts); drag files
+     onto it. PATH + script path injected at build time.
+  2. **Watched inbox** — `bin/brain-clip-watch.sh` + launchd WatchPaths agent
+     `bin/launchd/com.secondbrain.clip.plist` over ~/Brain Inbox; resolves `.webloc`/
+     `.url` links, archives originals to `_done/`, lock-serialized.
+  3. **Right-click Service** — Automator Quick Action
+     `bin/gui/clip-service/Clip to Brain.workflow` → ~/Library/Services.
+  4. **Browser button** — unpacked Chrome extension `bin/gui/chrome-extension/`
+     (MV3 popup) → POSTs the tab to `bin/brain-clip-server.py` (stdlib HTTP, 127.0.0.1:8766,
+     arg-list subprocess, no shell), kept alive by `com.secondbrain.clipserver.plist`.
+- BUGFIX (important): `bin/brain-clip.sh` wrote to `sources/` **relative to the current
+  working directory**, not to the vault — it computed `$VAULT` but only used it for the
+  validator call. Last turn's tests masked this by `cd`-ing into the test vault first.
+  The watched-folder test (run from the repo root against the scratch vault) exposed it:
+  the scratch clipper wrote into the REAL `sources/`. Root cause confirmed by a
+  controlled experiment. Fix: absolutize a file argument before `cd`, then `cd "$VAULT"`
+  so every mode writes into the repo regardless of where it's launched (app, share-sheet,
+  cron, any directory). Re-verified: foreign-cwd CLI and the watcher now write to the
+  vault only; no stray `./sources` is created.
+- cleanup: removed 4 test artifacts that the pre-fix bug leaked into the real `sources/`
+  (`2026-06-23-{dropped,example-domain,example-domain-2,zzz-experiment-marker}.md`) —
+  my own accidental output, never committed, not genuine captures. `sources/` is back to
+  the single real source + README; repo validates 9 files / 0 fail.
+- verification: all static checks pass (zsh -n, py_compile, `plutil -lint` on both plists
+  + the .workflow's Info.plist/document.wflow, manifest.json JSON-lint, `osacompile`
+  compiles the app). Runtime smoke tests against the scratch vault: helper server
+  (GET /health, POST /clip url + text + empty-error) and the inbox watcher (file +
+  `.url` + `.webloc`, archiving, log) both pass; every written source validates clean.
+  Not runtime-verifiable headlessly (documented as manual GUI steps): the app's
+  click/drop handlers, the Service appearing in the right-click menu (enable under System
+  Settings ▸ Keyboard ▸ Services), and loading the unpacked Chrome extension.
+- docs: expanded the tool #1 "Surfaces" list in docs/external-tools.md (all five marked
+  built, with file pointers + the installer).
+- not run on this machine / not committed — the user runs `bin/brain-clip-gui.sh install`
+  to deploy (builds the app, loads the two agents, installs the Service, creates the
+  inbox). Left for the user, consistent with the scheduler.

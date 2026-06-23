@@ -1,0 +1,46 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+  <!--
+    Second Brain — localhost clip helper for the Chrome "Clip to Brain" button.
+    Keeps bin/brain-clip-server.py listening on 127.0.0.1:8766 so the extension can
+    POST the current tab's URL. KeepAlive restarts it if it dies; RunAtLoad starts it
+    at login. Localhost-only, no synthesis. Managed via bin/brain-clip-gui.sh.
+  -->
+  <key>Label</key>
+  <string>com.secondbrain.clipserver</string>
+
+  <key>ProgramArguments</key>
+  <array>
+    <string>/usr/bin/env</string>
+    <string>python3</string>
+    <string>/Users/User/Tomi/second-brain/bin/brain-clip-server.py</string>
+    <string>--port</string>
+    <string>8766</string>
+  </array>
+
+  <key>RunAtLoad</key>
+  <true/>
+
+  <key>KeepAlive</key>
+  <true/>
+
+  <key>EnvironmentVariables</key>
+  <dict>
+    <key>PATH</key>
+    <string>/opt/homebrew/bin:/Users/User/.local/bin:/usr/local/bin:/usr/bin:/bin</string>
+  </dict>
+
+  <key>WorkingDirectory</key>
+  <string>/Users/User/Tomi/second-brain</string>
+
+  <key>StandardOutPath</key>
+  <string>/Users/User/Tomi/second-brain/.brain/launchd.clipserver.log</string>
+  <key>StandardErrorPath</key>
+  <string>/Users/User/Tomi/second-brain/.brain/launchd.clipserver.log</string>
+
+  <key>ProcessType</key>
+  <string>Background</string>
+</dict>
+</plist>

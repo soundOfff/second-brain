@@ -1,0 +1,12 @@
+{
+  "manifest_version": 3,
+  "name": "Clip to Brain",
+  "version": "1.0.0",
+  "description": "Clip the current tab (or a quick note) into your second brain's sources/ via the local clip helper.",
+  "action": {
+    "default_popup": "popup.html",
+    "default_title": "Clip to Brain"
+  },
+  "permissions": ["tabs"],
+  "host_permissions": ["http://127.0.0.1:8766/*"]
+}
