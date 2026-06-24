@@ -6,9 +6,12 @@
 # Claude Code local
 .claude/settings.local.json
 
+.claude/worktrees/*
+
 # Runtime logs from headless / scheduled skill runs
 .brain/
 
 # Python bytecode
 __pycache__/
 *.pyc
+
