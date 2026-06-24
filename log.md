@@ -343,3 +343,24 @@ Turns capture from push-only into pull: the brain now feeds itself unattended.
   `--note` prepend confirmed via `--dry-run`; server `run_clip` routing unit-checked for
   page-clip/note-only/legacy/empty payloads (correct arg lists, tags slugified). Live
   popup render is the human's to eyeball on reload.
+
+## 2026-06-24 — activate: pull feeder (5 subscriptions + daily schedule)
+
+- **Why.** The pull-feeder machinery (external tool #4) was built but dormant: `feeds.toml`
+  had zero active feeds and `com.secondbrain.feed` was never loaded, so nothing flowed in
+  automatically. The human asked to turn it on.
+- **Subscriptions (all HTTP-200 validated at activation).** Wrote 5 `[[feed]]` blocks to
+  `feeds.toml`, chosen to match the brain's demonstrated focus (LLMs, agentic coding, NLP):
+  `simon-willison` (rss, auto, cap 3), `andrej-karpathy` (rss, auto, cap 2,
+  karpathy.bearblog.dev), `hn-ai` (rss, queue, cap 10), `arxiv-cs-cl` (rss, queue, cap 5),
+  `lobsters-ai` (rss, queue, cap 8).
+- **Lobsters gotcha.** Used the `ai` tag feed only — Lobsters' `ml` tag means
+  MetaLanguage/OCaml, not machine learning, so `ai,ml` would import compiler noise.
+- **Schedule.** `bin/brain-feed-schedule.sh install` → `com.secondbrain.feed` loaded, polls
+  daily 01:30 (just before the 02:00 `/sync`). Plain python/shell, no bypassPermissions.
+- **First real pull.** 5 deposited to `sources/` (the two `auto` blogs), 23 queued to
+  `.brain/review/` (the three aggregators; overflow deferred under per-feed caps). Deposited
+  sources carry valid frontmatter (`id/title/type/url/captured/via/tags`). They ride
+  tonight's `/sync`; the queue awaits `brain-feed review`. Now 9 sources, 25 in queue.
+- **Not committed.** `feeds.toml` + the 5 new `sources/` files are left uncommitted for the
+  human (deposits are normally folded by the nightly `/sync` PR flow).

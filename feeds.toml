@@ -18,6 +18,60 @@ default_cap = 5
 # title (a label). All examples below are COMMENTED OUT — uncomment + edit to activate.
 # Until you add a real feed, `brain-feed run` is a safe no-op.
 
+# === Active subscriptions (activated 2026-06-24) ===========================
+# Five feeds matching this brain's focus: LLMs, agentic coding, NLP papers.
+# Every URL below was HTTP-200 validated at activation time.
+#   auto  -> straight into sources/  (the nightly 02:00 /sync folds them in)
+#   queue -> land in .brain/review/ for `brain-feed review` triage.
+
+[[feed]]
+id = "simon-willison"
+adapter = "rss"
+url = "https://simonwillison.net/atom/everything/"
+trust = "auto"
+n = 3
+tags = ["blog", "llm"]
+title = "Simon Willison"
+
+[[feed]]
+id = "andrej-karpathy"
+adapter = "rss"
+url = "https://karpathy.bearblog.dev/feed/?type=rss"
+trust = "auto"
+n = 2
+tags = ["blog", "llm"]
+title = "Andrej Karpathy"
+
+# Noisy aggregator query -> queued for triage, not trusted.
+[[feed]]
+id = "hn-ai"
+adapter = "rss"
+url = "https://hnrss.org/newest?q=AI&points=100"
+trust = "queue"
+n = 10
+tags = ["news", "ai"]
+title = "Hacker News — AI (>=100 pts)"
+
+# arXiv NLP/CL — high volume, mixed relevance -> queue.
+[[feed]]
+id = "arxiv-cs-cl"
+adapter = "rss"
+url = "https://export.arxiv.org/rss/cs.CL"
+trust = "queue"
+n = 5
+tags = ["paper", "nlp"]
+title = "arXiv cs.CL"
+
+# Lobsters: the `ai` tag only (its `ml` tag means MetaLanguage/OCaml, not machine learning).
+[[feed]]
+id = "lobsters-ai"
+adapter = "rss"
+url = "https://lobste.rs/t/ai.rss"
+trust = "queue"
+n = 8
+tags = ["news", "ai"]
+title = "Lobsters — AI tag"
+
 # --- rss: blogs, newsletters-with-RSS, Reddit, GitHub releases, arXiv, ... ---
 # RSS/Atom is the universal substrate. A trusted author's blog flows straight in:
 # [[feed]]
