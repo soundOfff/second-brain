@@ -1,0 +1,50 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+  <!--
+    Second Brain — pull feeder (external tool #4).
+    Runs bin/brain-feed.sh run every day at 01:30 — just before the 02:00 /sync, so
+    trusted deposits ride the same night's fold and the review queue is waiting each
+    morning. launchd re-fires a missed StartCalendarInterval job when the Mac next
+    wakes, so a sleeping machine still catches up. Plain python/shell — no `claude`,
+    no bypassPermissions. Managed via bin/brain-feed-schedule.sh; OPT-IN.
+    PATH includes /opt/homebrew/bin so the optional yt-dlp adapter works when present.
+  -->
+  <key>Label</key>
+  <string>com.secondbrain.feed</string>
+
+  <key>ProgramArguments</key>
+  <array>
+    <string>/bin/zsh</string>
+    <string>/Users/User/Tomi/second-brain/bin/brain-feed.sh</string>
+    <string>run</string>
+  </array>
+
+  <key>StartCalendarInterval</key>
+  <dict>
+    <key>Hour</key><integer>1</integer>
+    <key>Minute</key><integer>30</integer>
+  </dict>
+
+  <key>RunAtLoad</key>
+  <false/>
+
+  <key>EnvironmentVariables</key>
+  <dict>
+    <key>PATH</key>
+    <string>/opt/homebrew/bin:/Users/User/.local/bin:/usr/local/bin:/usr/bin:/bin</string>
+  </dict>
+
+  <key>WorkingDirectory</key>
+  <string>/Users/User/Tomi/second-brain</string>
+
+  <key>StandardOutPath</key>
+  <string>/Users/User/Tomi/second-brain/.brain/launchd.feed.log</string>
+  <key>StandardErrorPath</key>
+  <string>/Users/User/Tomi/second-brain/.brain/launchd.feed.log</string>
+
+  <key>ProcessType</key>
+  <string>Background</string>
+</dict>
+</plist>
