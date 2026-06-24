@@ -233,3 +233,34 @@ code written — spec only.
 - **Decisions captured in** `docs/external-tools.md` §4 (status: DESIGNED, NOT BUILT) +
   build-order entry #4. Build deferred — it depends on #1 (deposit) and #3 (guard),
   both already shipped.
+
+## 2026-06-24 — build: pull feeder (external tool #4 of docs/external-tools.md)
+
+Built the fourth external-but-matched tool, the *pull* feeder, from its frozen design.
+Turns capture from push-only into pull: the brain now feeds itself unattended.
+
+- **Shipped.** `bin/brain-feed.py` (core + four adapters), `bin/brain-feed.sh` (wrapper),
+  `bin/brain-feed-schedule.sh` (install/status/run/uninstall), `bin/launchd/
+  com.secondbrain.feed.plist` (opt-in daily 01:30 — plain python, no `claude`), and a
+  committed `feeds.toml` (ships with commented examples; first run is a safe no-op).
+- **How it works.** Reads `feeds.toml`, pulls new items per adapter, dedups (seen GUIDs
+  in `.brain/feed-state.db` + against existing `sources/` `url:`s), applies a per-feed
+  daily cap (overflow deferred unseen, drains later days), then routes by trust:
+  `auto` → `sources/`, `queue` → `.brain/review/`. Deposit RENDERS via `brain-clip.sh
+  --dry-run` then places the file itself, injecting `via:`/`tags:` provenance — so all
+  frontmatter/slug/extraction logic stays in tool #1 and tool #3 still guards what lands.
+- **Adapters.** `rss` (RSS+Atom, namespace-agnostic) and `list` (drain a markdown
+  to-read pile; drained URLs commented `# done:` in place) are pure stdlib. `yt` (yt-dlp
+  captions → transcript, else feed summary → article) and `email` (IMAP poll, app-
+  password from the macOS Keychain) degrade gracefully — a missing dep/cred disables the
+  adapter with a logged reason, never breaking the run.
+- **Commands.** `brain-feed run [--dry-run] [--feed ID]`, `brain-feed review` (interactive
+  k/d/s), `brain-feed status`.
+- **Verified.** Integration-tested end-to-end against a throwaway vault + a local HTTP
+  server: rss auto+queue, atom parsing, list line-commenting, cap + defer/drain across
+  days, idempotent re-run, dedup vs a hand-clip, provenance injection, review triage,
+  dry-run leaving no trace, and validator-clean deposits — plus unit tests for the VTT
+  flattener, email body extraction, and the degradation paths. 23/23 green.
+- **Docs.** `docs/external-tools.md` §4 flipped to BUILT (+ status header + build-order);
+  README "Local tooling" gained a pull bullet. No `CLAUDE.md` change (the feeder, like
+  the clipper, is a deterministic surrounding tool, not an LLM workflow).
