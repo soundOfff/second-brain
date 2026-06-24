@@ -1,7 +1,7 @@
 # External-but-Matched Tools — Design Spec
 
-Status: **three built · #4 (pull feeder) designed, not built** · Created: 2026-06-23 ·
-Last built: 2026-06-23 (#1 capture bridge) · Last designed: 2026-06-23 (#4 pull feeder)
+Status: **all four built** · Created: 2026-06-23 ·
+Last built: 2026-06-24 (#4 pull feeder)
 
 Companion tools that live *outside* the brain's internal skills (`/capture`, `/sync`,
 `/lint`, `/digest`, `/remember`) but bind to the **same contract** defined in
@@ -177,15 +177,26 @@ nonexistent source IDs.
 
 ---
 
-## 4. Pull feeder — get material IN on a schedule  ◻️ DESIGNED 2026-06-23, NOT BUILT
+## 4. Pull feeder — get material IN on a schedule  ✅ BUILT 2026-06-24
 
-> **Status: design-complete, unbuilt.** Spec frozen via a `/grill-me` session
-> 2026-06-23. The shipping name is `bin/brain-feed.py` (+ `bin/brain-feed.sh` wrapper).
-> Where #1 is *push* (you clip one thing, deliberately, now), #4 is *pull* — it
-> subscribes to feeds and fetches new material **unattended, once a day**. It does the
-> same zero-synthesis deposit as #1, reusing #1's renderer, and the nightly `/sync`
-> folds the result in. The hard part isn't fetching — it's not poisoning the brain with
-> a firehose, which the design solves with **per-feed trust** + a **per-feed daily cap**.
+> Shipped as `bin/brain-feed.py` (+ `bin/brain-feed.sh` wrapper). Where #1 is *push* (you
+> clip one thing, deliberately, now), #4 is *pull* — it subscribes to feeds (`feeds.toml`)
+> and fetches new material **unattended, once a day**, doing the same zero-synthesis
+> deposit as #1 and reusing #1's renderer; the 02:00 `/sync` folds it in. The design's
+> hard part — not poisoning the brain with a firehose — is solved by **per-feed trust**
+> (`auto` → `sources/`; `queue` → `.brain/review/`) + a **per-feed daily cap** (overflow
+> deferred unseen, drains over later days). Four adapters: `rss`/`list` are pure-stdlib;
+> `yt` (yt-dlp captions) and `email` (IMAP, Keychain app-password) degrade gracefully —
+> absent dep/creds disables the adapter with a logged reason, never breaking the run.
+> State in `.brain/feed-state.db` (sqlite: seen GUIDs + per-feed daily counts); deposits
+> carry `via: <feed-id>` provenance and are deduped against existing `sources/` `url:`s.
+> Commands: `brain-feed run [--dry-run] [--feed ID]`, `brain-feed review` (interactive
+> k/d/s triage), `brain-feed status`. Schedule (opt-in, daily 01:30) via
+> `bin/brain-feed-schedule.sh install|status|run|uninstall` +
+> `bin/launchd/com.secondbrain.feed.plist` — plain python, no `claude`, no special
+> privilege. Verified end-to-end (rss auto+queue, atom, list line-commenting, cap +
+> defer/drain across days, dedup, provenance, review, dry-run, validator-clean deposits;
+> VTT + email-body helpers unit-tested) against a throwaway vault + local HTTP server.
 
 **Problem.** #1 closed "capture needs a keyboard in this repo" — but it's still *push*:
 a human has to decide, per item, to clip it. The material a person most wants in a second
@@ -310,8 +321,8 @@ documenting" way.
 
 ## Recommended build order
 
-Tools #1–#3 are **built**. The remaining work is #4, and it slots in last because it
-*depends on* #1 (it reuses the clipper's deposit) and #3 (which guards what it writes):
+All four are **built**. #4 slotted in last because it *depends on* #1 (it reuses the
+clipper's deposit) and #3 (which guards what it writes):
 
 1. **#3 Validator first** — cheapest, pure-deterministic, and it makes #1 safe by
    guarding whatever the clipper writes. ✅
@@ -320,8 +331,8 @@ Tools #1–#3 are **built**. The remaining work is #4, and it slots in last beca
 3. **#2 Wiki server** — highest polish, lowest urgency; the wiki is readable as files
    until the corpus is big enough to need navigation. ✅
 4. **#4 Pull feeder** — built on #1's deposit + #3's guard. Turns capture from *push*
-   into *pull* so the brain feeds itself; the highest-leverage remaining tool, deferred
-   only because it presumes the deposit path #1 already provides. ◻️ designed, not built.
+   into *pull* so the brain feeds itself; the highest-leverage tool, built last only
+   because it presumes the deposit path #1 already provides. ✅
 
 All four are shell/python-first (`bin/`), matching the existing `brain-*.sh` convention,
 so they stay in-repo, version-controlled, and runnable by the same launchd machinery.

@@ -66,9 +66,15 @@ Deterministic helpers — no LLM, no tokens — that surround the agent:
   `CLAUDE.md` schema (frontmatter, kebab-case slugs, citations); `bin/brain_tidy.py
   --fix` applies the safe fixes. `… --install-hook` adds a pre-commit guard so broken
   pages can't be committed.
-- **Capture from anywhere** — `bin/brain-clip.sh <url | file | text>` lands raw
+- **Capture from anywhere (push)** — `bin/brain-clip.sh <url | file | text>` lands raw
   material into `sources/` with valid frontmatter; `bin/brain-clip-watch.sh` ingests
   anything dropped into a watched inbox folder.
+- **Subscribe to feeds (pull)** — `bin/brain-feed.sh run` polls the feeds in `feeds.toml`
+  (RSS/Atom, a to-read list, YouTube, an email label) and deposits new items into
+  `sources/` (trusted feeds) or `.brain/review/` (queued — triage with `brain-feed
+  review`). A per-feed daily cap stops any feed flooding the brain. Reuses the clipper's
+  deposit, so the nightly `/sync` folds the result in. Opt-in daily 01:30 schedule via
+  `bin/brain-feed-schedule.sh install`.
 - **Read the wiki in a browser** — `bin/brain-serve.sh [port]` renders `wiki/` and
   `index.md` read-only, resolving wikilinks, citations, and backlinks, and surfacing
   stubs and dangling links.
