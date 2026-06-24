@@ -264,3 +264,82 @@ Turns capture from push-only into pull: the brain now feeds itself unattended.
 - **Docs.** `docs/external-tools.md` §4 flipped to BUILT (+ status header + build-order);
   README "Local tooling" gained a pull bullet. No `CLAUDE.md` change (the feeder, like
   the clipper, is a deterministic surrounding tool, not an LLM workflow).
+
+## 2026-06-24 — feat: clipper recognizes video URLs → captions transcript
+
+- **What.** `bin/brain-clip.sh` MODE 1 (URL) now branches: a recognized video host
+  (YouTube `youtube.com`/`youtu.be`/`m.`/`music.`, Vimeo) is pulled as its **captions
+  transcript** via `yt-dlp` (auto + uploaded subs, `en.*`, WebVTT flattened to prose;
+  `title`/`uploader` from the `--write-info-json`) and written as `type: transcript`.
+  Everything else keeps the existing `curl` + `HTMLParser` article path. Both branches
+  emit the same `@@TITLE@@/@@AUTHOR@@/@@BODY@@` protocol, so the downstream id/slug/
+  dedupe/validate logic is untouched.
+- **Why.** Before, a bare video URL only got a real transcript through the feed's `yt`
+  *channel* adapter; a one-off video link (hand-clipped, dropped in the watch folder, or
+  listed in a `list` to-read feed) fell through to player-page HTML — useless. Putting
+  the detection in the clipper means every URL deposit path gains video support at once.
+- **Graceful degradation.** `yt-dlp` is the only optional dep and stays optional: if it
+  isn't on PATH the clipper logs a heads-up and falls back to page extraction; if it runs
+  but the video has no captions, it deposits a clear "no transcript available" stub
+  (`type: transcript`) rather than failing. `--no-playlist` + `--socket-timeout 30` keep
+  a stray `?list=` or a hang from biting.
+- **Verified.** Tested with a stub `yt-dlp` injecting a synthetic VTT + info.json:
+  transcript deposited as `type: transcript`, title/author from the json, timing tags and
+  adjacent dupe captions stripped, `youtu.be` short form detected, `&list=` ignored. Also
+  confirmed the no-yt-dlp warning fires and falls back, and a non-video URL is unchanged.
+- **Docs.** README capture bullet, `docs/external-tools.md` §1 (added a Video-URL mode),
+  and `feeds.toml` `list` note all updated. No `CLAUDE.md` change — the clipper remains a
+  deterministic surrounding tool, not an LLM workflow. Follow-up worth considering: thin
+  the feed's `yt` adapter to reuse this one transcript path (removes the duplicate VTT
+  flattener in `brain-feed.py`).
+
+## 2026-06-24 — feat: Chrome clip extension is video-aware
+
+- **What.** The "Clip to Brain" popup (`bin/gui/chrome-extension`) now detects a
+  YouTube/Vimeo tab (`VIDEO_RE`, mirroring `is_video_url` in `brain-clip.sh`), relabels
+  its primary button to **"Clip transcript"**, and shows a hint that it captures the
+  captions transcript (needs `yt-dlp` on the host). manifest bumped to 1.1.0.
+- **Plumbing was already there.** `brain-clip-server.py` forwards the tab URL straight to
+  `brain-clip.sh`, which already auto-routes video URLs to the transcript path — so this
+  is a pure UX change, no server/permission change (still `tabs` + localhost only).
+- **One correctness fix.** For a video tab the primary button now ALWAYS posts the URL
+  (the transcript); previously a typed note silently hijacked any page-clip into a plain
+  note, which would have been surprising under a "Clip transcript" label. "Clip note
+  only" still deposits a standalone note.
+- **Verified.** Detection unit-tested in node across youtube/youtu.be/m./music./shorts/
+  vimeo + a `notyoutube.com.evil.com` spoof (rejected). Full chain exercised live:
+  POST {url,title} → clip server → clipper video branch deposited `type: transcript`
+  with metadata + flattened captions (stub `yt-dlp`), throwaway file then removed.
+- **Docs.** `docs/external-tools.md` browser-button bullet + `bin/brain-clip-gui.sh`
+  install hint updated.
+
+## 2026-06-24 — feat: redesigned clip extension popup + note-above-capture
+
+- **What.** Reskinned the "Clip to Brain" popup (`bin/gui/chrome-extension`) to the dark
+  gold-on-charcoal design: `CLIP TO BRAIN` wordmark + `→ sources/` tag, a current-tab
+  card (favicon/title/url), a detection row (Article/Video/Local file + a token-size
+  estimate), toggleable suggested-tag chips, the optional-note box, a non-web-page
+  warning, primary **Clip to sources** (⌘S) + ghost **Note only**, and a success state
+  (checkmark + saved `sources/inbox/…` path + Clip another). manifest → 1.2.0.
+- **Real data, no mock state.** favicon/title/url/kind come from `chrome.tabs`; suggested
+  tags + the size estimate are read from the live page by a one-shot
+  `chrome.scripting.executeScript` (page `<meta keywords>`/`og:tag` + `body.innerText`
+  length) under the `activeTab` grant — added `activeTab` + `scripting` to the manifest.
+  The tags section hides itself when the page exposes none (nothing fabricated).
+- **Backend: `--note` so a note rides ABOVE a page capture.** New `--note` flag on
+  `brain-clip.sh` prepends the reader's note (as a blockquote, with a `---` rule) above
+  the extracted page/file body, keeping the raw capture intact beneath it. Source
+  frontmatter is unchanged (no `tags` key — tags live on wiki pages), so selected chips
+  are folded into the body as a `Tags: #a #b` hint line for the nightly `/sync`.
+  `brain-clip-server.py` now accepts `note`/`tags`: a page clip routes through `--note`
+  (extraction preserved) instead of the old behaviour where a typed note hijacked the
+  page into a plain note; note-only and the legacy `{url,text}`/`{url,title}` payloads
+  are unchanged.
+- **Deliberately NOT done.** URL-dedupe-and-update from the design spec was skipped — it
+  would mutate an existing `sources/` file, violating Layer-1 immutability; the clipper
+  stays append-only. No "Open Review Queue" button either (the `queue-ui` app isn't
+  built yet — no dead link shipped).
+- **Verified.** `zsh -n` + `py_compile` + `node --check` clean; manifest is valid JSON;
+  `--note` prepend confirmed via `--dry-run`; server `run_clip` routing unit-checked for
+  page-clip/note-only/legacy/empty payloads (correct arg lists, tags slugified). Live
+  popup render is the human's to eyeball on reload.

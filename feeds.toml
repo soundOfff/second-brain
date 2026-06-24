@@ -47,7 +47,9 @@ default_cap = 5
 
 # --- list: drain a markdown to-read pile (one clip per URL) ---
 # Drained URLs are commented out in place (`# done: ...`), not deleted, to keep a record.
-# Pairs naturally with the ~/Brain Inbox watched folder from tool #1.
+# Pairs naturally with the ~/Brain Inbox watched folder from tool #1. A YouTube/Vimeo URL
+# in the pile is deposited as its captions transcript (via yt-dlp), same as a hand-clip —
+# so you can queue a one-off video by pasting its link here, no channel subscription needed.
 # [[feed]]
 # id = "to-read"
 # adapter = "list"

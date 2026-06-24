@@ -68,7 +68,11 @@ Deterministic helpers — no LLM, no tokens — that surround the agent:
   pages can't be committed.
 - **Capture from anywhere (push)** — `bin/brain-clip.sh <url | file | text>` lands raw
   material into `sources/` with valid frontmatter; `bin/brain-clip-watch.sh` ingests
-  anything dropped into a watched inbox folder.
+  anything dropped into a watched inbox folder. A YouTube/Vimeo URL is recognized and
+  deposited as its **captions transcript** (`type: transcript`) via `yt-dlp` instead of
+  the useless player-page HTML — so any path that hands the clipper a URL (the watch
+  folder, the `list` feed, a share-sheet) can capture a video by link. Without `yt-dlp`
+  installed it warns and falls back to page extraction.
 - **Subscribe to feeds (pull)** — `bin/brain-feed.sh run` polls the feeds in `feeds.toml`
   (RSS/Atom, a to-read list, YouTube, an email label) and deposits new items into
   `sources/` (trusted feeds) or `.brain/review/` (queued — triage with `brain-feed

@@ -45,6 +45,11 @@ on a schedule). #4 deliberately reuses #1's deposit path rather than reimplement
 > - **URL** → `curl` fetch + a stdlib `HTMLParser` readability pass → `type: article`
 >   markdown (title/author pulled from `og:`/`<title>`/`meta[author]`); nav/script/style
 >   stripped.
+> - **Video URL** (YouTube/Vimeo) → recognized by host and pulled as its **captions
+>   transcript** via `yt-dlp` (auto/uploaded subs, flattened from WebVTT to prose;
+>   title/uploader from the `info.json`) → `type: transcript`. This is the one path with
+>   an optional dependency: no `yt-dlp` ⇒ a logged heads-up and graceful fall-back to the
+>   page-extraction path above (the player HTML), never a silent failure.
 > - **File** → text files (`.md/.txt/...`) inlined as a markdown source; binaries
 >   (PDF/image/data) copied in as-is with a `<stem>.meta.md` sidecar; `type` inferred
 >   from extension.
@@ -81,7 +86,9 @@ Surfaces, cheapest → richest (✅ = built):
 - ✅ **Browser button** — an unpacked Chrome extension (`bin/gui/chrome-extension`)
   whose toolbar popup POSTs the current tab to a localhost helper
   (`bin/brain-clip-server.py`, kept alive by the `com.secondbrain.clipserver` agent),
-  which shells out to `brain-clip.sh`.
+  which shells out to `brain-clip.sh`. On a YouTube/Vimeo tab the popup detects the
+  video host, relabels its button to **“Clip transcript”**, and captures the captions
+  transcript (`type: transcript`) instead of the page — same auto-detection as the CLI.
 
 All five deploy via **`bin/brain-clip-gui.sh install`** (or `app|folder|service|browser`
 individually; `status`; `uninstall [which]`), mirroring `bin/brain-schedule.sh`. The

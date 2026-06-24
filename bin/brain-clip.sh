@@ -12,6 +12,7 @@
 # brain-clip.sh is the cheap front door — it only deposits the raw source.
 #
 #   brain-clip.sh <url>                 fetch + extract a web page    -> type: article
+#   brain-clip.sh <youtube|vimeo url>   pull the captions transcript  -> type: transcript
 #   brain-clip.sh /path/to/file.pdf     copy a file in (+ .meta.md)   -> type by ext
 #   brain-clip.sh "pasted text ..."     a quick note                  -> type: note
 #   echo text | brain-clip.sh -         read note text from stdin     -> type: note
@@ -21,6 +22,8 @@
 #   --title "..."  override the derived title
 #   --author "..." set the author frontmatter key
 #   --url <u>      attach a source url (for file/text modes)
+#   --note "..."   prepend a note (as a blockquote) above the extracted/copied body
+#                  (url + text-file modes) — the page capture itself is kept intact
 #   --dry-run      print the source that WOULD be written; touch nothing
 #   -h | --help    this help
 #
@@ -37,6 +40,7 @@ usage() {
 brain-clip.sh — deposit a raw, immutable source (no LLM); nightly /sync folds it in.
 
   brain-clip.sh <url>               fetch + extract a web page   -> type: article
+  brain-clip.sh <youtube|vimeo url> pull the captions transcript -> type: transcript
   brain-clip.sh /path/to/file.pdf   copy a file in (+ .meta.md)  -> type by extension
   brain-clip.sh "pasted text ..."   a quick note                 -> type: note
   echo text | brain-clip.sh -       read note text from stdin    -> type: note
@@ -46,6 +50,7 @@ Flags:
   --title "..."  override the derived title
   --author "..." set the author frontmatter key
   --url <u>      attach a source url (file/text modes)
+  --note "..."   prepend a note (blockquote) above the extracted/copied body
   --dry-run      print the source that WOULD be written; touch nothing
   -h | --help    this help
 EOF
@@ -55,7 +60,7 @@ EOF
 # Flags may appear anywhere. Non-flag tokens collect into `pos`; the mode is decided
 # from pos[1] (url / existing file), and for the text/note case all positionals are
 # rejoined so unquoted multi-word notes still work. `--` stops flag parsing.
-TYPE_OVERRIDE="" TITLE_OVERRIDE="" AUTHOR_OVERRIDE="" URL_OVERRIDE="" DRYRUN=0
+TYPE_OVERRIDE="" TITLE_OVERRIDE="" AUTHOR_OVERRIDE="" URL_OVERRIDE="" NOTE_OVERRIDE="" DRYRUN=0
 typeset -a pos
 endflags=0
 while (( $# )); do
@@ -66,6 +71,7 @@ while (( $# )); do
     --title)    TITLE_OVERRIDE="${2:?--title needs a value}"; shift 2 ;;
     --author)   AUTHOR_OVERRIDE="${2:?--author needs a value}"; shift 2 ;;
     --url)      URL_OVERRIDE="${2:?--url needs a value}"; shift 2 ;;
+    --note)     NOTE_OVERRIDE="${2:?--note needs a value}"; shift 2 ;;
     --dry-run)  DRYRUN=1; shift ;;
     --)         endflags=1; shift ;;
     -)          pos+=("-"); shift ;;
@@ -135,6 +141,15 @@ emit_fm() {
   print -r -- "---"
 }
 
+# If a --note was given, prepend it (as a blockquote) above the captured body, so the
+# raw page/file capture stays intact beneath the reader's note. No-op when unset.
+prepend_note() {
+  local body="$1" q
+  [[ -z "$NOTE_OVERRIDE" ]] && { print -r -- "$body"; return; }
+  q="$(print -r -- "$NOTE_OVERRIDE" | sed 's/^/> /')"
+  printf '%s\n\n---\n\n%s' "$q" "$body"
+}
+
 # Write a markdown source (frontmatter + body) or, with --dry-run, print it.
 write_md() {
   local path="$1" body="$2"
@@ -147,17 +162,96 @@ write_md() {
   print -r -- "wrote $path"
 }
 
+# A URL we can pull a spoken-word transcript from via yt-dlp captions, rather than
+# scraping the (useless) player page HTML. Kept to known video hosts so we never shell
+# out to yt-dlp on an arbitrary article URL.
+is_video_url() {
+  local u="${1:l}"
+  case "$u" in
+    (http|https)://(www.|m.|music.)#youtube.com/*) return 0 ;;
+    (http|https)://youtu.be/*)                     return 0 ;;
+    (http|https)://(www.)#vimeo.com/*)             return 0 ;;
+  esac
+  return 1
+}
+
 URLV="" AUTHORV="$AUTHOR_OVERRIDE" TITLE="" TYPE="" ID=""
 
 # ============================================================================
-# MODE 1 — URL: fetch + readability-extract to markdown.  type: article
+# MODE 1 — URL. Video hosts -> captions transcript via yt-dlp (type: transcript);
+#              everything else -> fetch + readability-extract  (type: article).
+# Both branches emit the same @@TITLE@@/@@AUTHOR@@/@@BODY@@ protocol into $outf.
 # ============================================================================
 if [[ "$ARG" == (http|https)://* ]]; then
-  command -v curl  >/dev/null || die "curl not found"
   command -v python3 >/dev/null || die "python3 not found"
   URLV="$ARG"
-  htmlf="$(mktemp)"; outf="$(mktemp)"
-  trap '[[ -n "${htmlf:-}" ]] && rm -f "$htmlf" "$outf"' EXIT
+  outf="$(mktemp)"; htmlf=""; tdir=""
+  trap '[[ -n "${outf:-}" ]] && rm -f "$outf"
+        [[ -n "${htmlf:-}" ]] && rm -f "$htmlf"
+        [[ -n "${tdir:-}" ]] && rm -rf "$tdir"' EXIT
+
+  if is_video_url "$URLV" && command -v yt-dlp >/dev/null; then
+  # --- video: pull the auto/uploaded captions, flatten to prose -------------
+  deftype=transcript
+  tdir="$(mktemp -d)"
+  # captions + metadata in one pass; --no-playlist so a stray ?list= can't drag in a
+  # whole playlist. A non-zero exit (e.g. no subs) is non-fatal: parse whatever landed.
+  yt-dlp -q --no-warnings --no-playlist --skip-download \
+    --write-auto-subs --write-subs --sub-langs "en.*" --sub-format vtt \
+    --write-info-json --socket-timeout 30 \
+    -o "$tdir/%(id)s.%(ext)s" "$URLV" >/dev/null 2>&1 \
+    || print -u2 "$SELF: note — yt-dlp exited non-zero for '$URLV'; parsing whatever it fetched."
+
+  python3 - "$tdir" "$URLV" > "$outf" <<'PY'
+import sys, re, os, json, glob
+
+td = sys.argv[1]
+
+def vtt_to_text(vtt):
+    """Flatten WebVTT to prose: drop the header, cue numbers, timestamp lines and inline
+    timing tags, and collapse the adjacent duplicate lines auto-captions are full of."""
+    out = []
+    for raw in vtt.splitlines():
+        ln = raw.strip()
+        if not ln or ln == "WEBVTT" or ln.startswith(("NOTE", "STYLE", "Kind:", "Language:")):
+            continue
+        if "-->" in ln or ln.isdigit():
+            continue
+        ln = re.sub(r"<[^>]+>", "", ln)            # <c>, <00:00:00.000> timing tags
+        ln = re.sub(r"\s+", " ", ln).strip()
+        if not ln or (out and out[-1] == ln):
+            continue
+        out.append(ln)
+    return "\n".join(out)
+
+title = author = ""
+infos = sorted(glob.glob(os.path.join(td, "*.info.json")))
+if infos:
+    try:
+        d = json.load(open(infos[0], encoding="utf-8", errors="replace"))
+        title = (d.get("title") or "").strip()
+        author = (d.get("uploader") or d.get("channel") or "").strip()
+    except Exception:
+        pass
+
+body = ""
+vtts = sorted(glob.glob(os.path.join(td, "*.vtt")))
+if vtts:
+    body = vtt_to_text(open(vtts[0], encoding="utf-8", errors="replace").read()).strip()
+
+print("@@TITLE@@ " + title)
+print("@@AUTHOR@@ " + author)
+print("@@BODY@@")
+print(body)
+PY
+
+  else
+  # --- web page: fetch + readability-extract to markdown --------------------
+  is_video_url "$URLV" && print -u2 \
+    "$SELF: note — '$URLV' looks like a video but yt-dlp is not installed; extracting the page instead (install yt-dlp for transcripts)."
+  command -v curl >/dev/null || die "curl not found"
+  deftype=article
+  htmlf="$(mktemp)"
   curl -fsSL --max-time 30 -A "Mozilla/5.0 (brain-clip)" "$URLV" > "$htmlf" \
     || die "fetch failed: $URLV"
 
@@ -252,12 +346,13 @@ print("@@AUTHOR@@ "+(p.author or ""))
 print("@@BODY@@")
 print(text)
 PY
+  fi
 
   x_title="$(sed -n 's/^@@TITLE@@ //p' "$outf" | head -1)"
   x_author="$(sed -n 's/^@@AUTHOR@@ //p' "$outf" | head -1)"
   BODY="$(sed '1,/^@@BODY@@$/d' "$outf")"
 
-  TYPE="${TYPE_OVERRIDE:-article}"
+  TYPE="${TYPE_OVERRIDE:-$deftype}"
   TITLE="${TITLE_OVERRIDE:-$x_title}"
   [[ -z "$AUTHORV" ]] && AUTHORV="$x_author"
   # fallbacks if extraction came up empty
@@ -266,9 +361,16 @@ PY
   fi
   ID="$(unique_id "$(slugify "$TITLE")")"
   if [[ -z "${BODY// /}" ]]; then
-    BODY="> brain-clip: automated extraction returned no readable body. Raw source is
+    if [[ "$deftype" == transcript ]]; then
+      BODY="> brain-clip: no captions/transcript were available for this video (or yt-dlp
+> could not fetch them). The raw source is the URL above — a human can paste a transcript
+> in, or \`/sync\` can note the gap."
+    else
+      BODY="> brain-clip: automated extraction returned no readable body. Raw source is
 > the URL above; \`/sync\` (or a manual \`/capture\`) can refetch and synthesize it."
+    fi
   fi
+  BODY="$(prepend_note "$BODY")"
   write_md "sources/$ID.md" "$BODY"
 
 # ============================================================================
@@ -295,7 +397,7 @@ elif [[ "$ARG" != "-" && -f "$ARG" ]]; then
 
   # Text formats become a self-contained markdown source (frontmatter + content).
   if [[ "$ext" == (txt|md|markdown|rst|org) ]]; then
-    BODY="$(cat -- "$src")"
+    BODY="$(prepend_note "$(cat -- "$src")")"
     write_md "sources/$ID.md" "$BODY"
   else
     # Binary: copy as-is, write the frontmatter into a sidecar .meta.md.

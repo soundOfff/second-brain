@@ -111,6 +111,7 @@ install_browser() {
   note "      2. Load unpacked  →  select:"
   note "         $GUI/chrome-extension"
   note "      3. pin “Clip to Brain”, click it on any page → Clip page"
+  note "         (on a YouTube/Vimeo tab the button becomes “Clip transcript”)"
 }
 uninstall_browser() { note "▸ browser"; unload_agent com.secondbrain.clipserver; note "    (remove the unpacked extension from chrome://extensions yourself)" }
 

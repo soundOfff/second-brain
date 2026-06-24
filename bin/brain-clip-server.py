@@ -9,11 +9,12 @@ synthesis — it just deposits the raw source, exactly like the CLI. Run it unde
 
     brain-clip-server.py [--port 8766]
 
-POST /clip   body: form-encoded or JSON  { url? , text? , type? , title? }
+POST /clip   body: form-encoded or JSON  { url? , text? , note? , tags? , type? , title? }
 GET  /        health check / identity
 """
 import json
 import os
+import re
 import subprocess
 import sys
 import urllib.parse
@@ -26,9 +27,25 @@ ENV = dict(os.environ, PATH="/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin:" + 
 ALLOWED_TYPES = {"article", "pdf", "transcript", "screenshot", "note", "data"}
 
 
+def _tagline(tags):
+    """Selected chips -> a '#a #b' hashtag line the nightly /sync can pick up as hints.
+    Sources have no tags frontmatter key (that lives on wiki pages), so tags ride in the
+    body text instead. Accepts a list or a comma/space-separated string."""
+    if isinstance(tags, str):
+        tags = re.split(r"[,\s]+", tags)
+    slugs = []
+    for t in tags or []:
+        s = re.sub(r"[^a-z0-9]+", "-", str(t).strip().lower()).strip("-")[:24]
+        if s and s not in slugs:
+            slugs.append(s)
+    return ("Tags: " + " ".join("#" + s for s in slugs)) if slugs else ""
+
+
 def run_clip(fields):
     url = (fields.get("url") or "").strip()
     text = (fields.get("text") or "").strip()
+    note = (fields.get("note") or "").strip()
+    tagline = _tagline(fields.get("tags"))
     arg = url or text
     if not arg:
         return False, "nothing to clip (no url or text)"
@@ -39,9 +56,18 @@ def run_clip(fields):
     title = (fields.get("title") or "").strip()
     if title:
         args += ["--title", title]
-    if url and text:           # both given: treat text as a note with the url attached
-        args += ["--url", url]
-        arg = text
+    if text:
+        # Standalone note: the text IS the body; tags ride beneath it, url attaches.
+        if url:
+            args += ["--url", url]
+        arg = "\n\n".join(p for p in (text, tagline) if p)
+    else:
+        # Page/transcript clip: the backend fetches + extracts the url; an optional
+        # note + tags are prepended above that capture (kept intact) via --note.
+        combined = "\n\n".join(p for p in (note, tagline) if p)
+        if combined:
+            args += ["--note", combined]
+        arg = url
     args.append(arg)
     try:
         p = subprocess.run(args, capture_output=True, text=True, env=ENV, timeout=60)
