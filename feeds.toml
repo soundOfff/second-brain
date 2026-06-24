@@ -1,0 +1,79 @@
+# Second Brain — pull-feeder subscriptions (external tool #4; see docs/external-tools.md §4).
+#
+# This file IS part of the brain's identity: your subscription list, committed to git.
+# The pull feeder (bin/brain-feed.sh) reads it once daily, pulls new items from each
+# feed, and routes them by trust. It does ZERO synthesis — the nightly /sync folds in
+# whatever it deposits.
+#
+# THE DELIBERATE ACT is choosing and trusting a feed here (not clipping each item):
+#   trust = "auto"   -> items flow straight into sources/  (a curated, trusted feed)
+#   trust = "queue"  -> items land in .brain/review/ for `brain-feed review` (noisy feeds)
+#
+# A per-feed daily cap bounds throughput so no single feed can flood the brain; overflow
+# is deferred (left unseen) and drains over following days. Set globally or per feed.
+default_cap = 5
+
+# Every feed needs: id (unique), adapter (rss|list|yt|email), trust (auto|queue).
+# Optional: n (this feed's daily cap), tags (added to each deposited source's frontmatter),
+# title (a label). All examples below are COMMENTED OUT — uncomment + edit to activate.
+# Until you add a real feed, `brain-feed run` is a safe no-op.
+
+# --- rss: blogs, newsletters-with-RSS, Reddit, GitHub releases, arXiv, ... ---
+# RSS/Atom is the universal substrate. A trusted author's blog flows straight in:
+# [[feed]]
+# id = "simon-willison"
+# adapter = "rss"
+# url = "https://simonwillison.net/atom/everything/"
+# trust = "auto"
+# n = 3
+# tags = ["blog", "llm"]
+
+# A noisy query feed should be queued for triage, not trusted:
+# [[feed]]
+# id = "hn-ai"
+# adapter = "rss"
+# url = "https://hnrss.org/newest?q=AI&points=100"
+# trust = "queue"
+# n = 10
+
+# arXiv category feed (queue — high volume, mixed relevance):
+# [[feed]]
+# id = "arxiv-cs-cl"
+# adapter = "rss"
+# url = "http://export.arxiv.org/rss/cs.CL"
+# trust = "queue"
+# n = 5
+# tags = ["paper", "nlp"]
+
+# --- list: drain a markdown to-read pile (one clip per URL) ---
+# Drained URLs are commented out in place (`# done: ...`), not deleted, to keep a record.
+# Pairs naturally with the ~/Brain Inbox watched folder from tool #1.
+# [[feed]]
+# id = "to-read"
+# adapter = "list"
+# path = "~/Brain Inbox/to-read.md"
+# trust = "auto"
+# n = 5
+
+# --- yt: a YouTube channel (transcript if yt-dlp is installed, else the summary) ---
+# url is the channel's RSS feed: https://www.youtube.com/feeds/videos.xml?channel_id=<ID>
+# [[feed]]
+# id = "yt-lex"
+# adapter = "yt"
+# url = "https://www.youtube.com/feeds/videos.xml?channel_id=UCSHZKyawb77ixDdsGog4iWA"
+# trust = "queue"
+# n = 2
+# tags = ["video"]
+
+# --- email: poll a Gmail label over IMAP (newsletters forwarded/filtered to a label) ---
+# The app password lives ONLY in the macOS Keychain, never here or in git:
+#   security add-generic-password -a you@gmail.com -s brain-feed-imap -w
+# Without it the adapter disables itself and logs why.
+# [[feed]]
+# id = "newsletters"
+# adapter = "email"
+# user = "you@gmail.com"
+# mailbox = "Brain"          # the Gmail label to poll
+# keychain_service = "brain-feed-imap"
+# trust = "queue"
+# n = 10
