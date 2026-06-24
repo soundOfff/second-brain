@@ -1,0 +1,911 @@
+<!DOCTYPE html>
+<!--
+  Brain Feed — Review Queue
+  ─────────────────────────
+  A self-contained desktop triage prototype for the pull-feeder review queue
+  (external tool #4). The terminal `brain-feed review` walks .brain/review/ item by
+  item asking k/d/s; this is the same triage as a refined dark dev-tool window.
+
+  Single file, no build, no dependencies. Open it in a browser.
+
+    k keep → sources/    d drop    s skip    o open url    u undo
+    r rescan    g toggle graph    ↑/↓ navigate    click select    drag reorder
+
+  Locked theme: amber accent · comfortable density · calm intensity.
+-->
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Brain Feed — Review Queue</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&family=Inter:wght@400;450;500;600;700&display=swap" rel="stylesheet">
+<style>
+/* ───────────────────────────── reset / root ───────────────────────────── */
+*{box-sizing:border-box;margin:0;padding:0;}
+:root{
+  --ink:#ece8df; --ink-bright:#f5f1e8; --ink-muted:#b8b1a4; --ink-dim:#9a9384;
+  --ink-dim2:#8a8474; --ink-faint:#7e786b; --ink-fainter:#5a554c; --hair:#4a443a;
+  --bg:#1a1916; --panel:#1d1b17; --raise:#211e1a; --sunk:#1f1c18; --node:#252219;
+  --border:#322e28; --border-soft:#2a2722; --rail-neutral:#3a362f; --frame:#34302a;
+  --mono:'JetBrains Mono',ui-monospace,SFMono-Regular,Menlo,monospace;
+  --ui:Inter,system-ui,-apple-system,sans-serif;
+  --ease:cubic-bezier(.2,0,0,1);
+}
+html,body{height:100%;}
+body{
+  font-family:var(--ui);
+  background:
+    radial-gradient(120% 90% at 50% -10%, #232019 0%, #131210 60%, #0e0d0b 100%);
+  color:var(--ink);
+  -webkit-font-smoothing:antialiased;
+  -moz-osx-font-smoothing:grayscale;
+  text-rendering:optimizeLegibility;
+  min-height:100vh;
+  display:flex;flex-direction:column;align-items:center;justify-content:center;
+  gap:22px;padding:40px 20px;
+}
+.tnum{font-variant-numeric:tabular-nums;}
+
+/* ───────────────────────────── window frame ───────────────────────────── */
+#win{
+  width:1080px;height:720px;flex:0 0 auto;
+  background:var(--bg);
+  border-radius:12px;overflow:hidden;
+  border:1px solid var(--frame);
+  box-shadow:
+    0 1px 0 rgba(255,255,255,0.04) inset,
+    0 40px 90px -20px rgba(0,0,0,0.65),
+    0 12px 30px -12px rgba(0,0,0,0.5);
+  display:flex;flex-direction:column;position:relative;
+  /* accent vars (set by JS) */
+  --ac:#d8a04a; --ac-rgb:216,160,74; --ac-on:#1a1916;
+  /* density vars (default: comfortable) */
+  --side-pad:16px 18px 12px; --head-pad:22px 28px 16px; --title-size:23px;
+  --card-pad:22px 28px 24px; --recap-size:14.5px; --recap-pad:18px 20px;
+  --bar-pad:13px 22px; --btn-h:34px; --btn-pad:0 14px; --btn-f:12.5px;
+  --footer-h:60px; --row-pt:11px; --row-pb:11px; --node-c:22px;
+  /* intensity vars (default: calm) */
+  --sel-bg:rgba(var(--ac-rgb),0.08); --qrail:var(--rail-neutral); --qrail-w:1.5px;
+  --grail:var(--rail-neutral); --grail-w:1px; --reason-bg:rgba(var(--ac-rgb),0.12);
+}
+#win[data-density="compact"]{
+  --side-pad:12px 16px 9px; --head-pad:14px 24px 11px; --title-size:19px;
+  --card-pad:15px 24px 18px; --recap-size:13px; --recap-pad:14px 16px;
+  --bar-pad:9px 18px; --btn-h:30px; --btn-pad:0 11px; --btn-f:12px;
+  --footer-h:48px; --row-pt:9px; --row-pb:9px; --node-c:20px;
+}
+#win[data-intensity="vivid"]{
+  --sel-bg:rgba(var(--ac-rgb),0.13); --qrail:rgba(var(--ac-rgb),0.40); --qrail-w:2px;
+  --grail:rgba(var(--ac-rgb),0.42); --grail-w:2px; --reason-bg:rgba(var(--ac-rgb),0.16);
+}
+::selection{background:rgba(var(--ac-rgb),0.30);}
+
+/* scrollbars */
+.scroll{scrollbar-width:thin;scrollbar-color:#3a362f transparent;}
+.scroll::-webkit-scrollbar{width:10px;height:10px;}
+.scroll::-webkit-scrollbar-thumb{background:#3a362f;border-radius:6px;border:2px solid transparent;background-clip:padding-box;}
+.scroll::-webkit-scrollbar-thumb:hover{background:#4a443a;background-clip:padding-box;}
+.scroll::-webkit-scrollbar-track{background:transparent;}
+
+/* ───────────────────────────── title bar ───────────────────────────── */
+.titlebar{
+  height:40px;flex:0 0 40px;
+  background:linear-gradient(#262320,#211e1b);
+  border-bottom:1px solid var(--border);
+  display:flex;align-items:center;position:relative;padding:0 14px;
+}
+.lights{display:flex;gap:8px;align-items:center;}
+.light{width:12px;height:12px;border-radius:50%;}
+.light:nth-child(1){background:#ff5f57;}
+.light:nth-child(2){background:#febc2e;}
+.light:nth-child(3){background:#28c840;}
+.titlebar-title{
+  position:absolute;left:0;right:0;text-align:center;
+  font-family:var(--mono);font-size:12.5px;font-weight:500;color:var(--ink-muted);
+  letter-spacing:.2px;pointer-events:none;
+}
+.titlebar-stat{
+  margin-left:auto;font-family:var(--mono);font-size:10.5px;color:var(--ink-faint);
+  letter-spacing:.3px;z-index:1;
+}
+
+/* ───────────────────────────── body split ───────────────────────────── */
+.body{flex:1;display:flex;min-height:0;}
+
+/* ───────────────────────────── sidebar ───────────────────────────── */
+.sidebar{
+  width:296px;flex:0 0 296px;background:var(--panel);
+  border-right:1px solid var(--border);
+  display:flex;flex-direction:column;min-height:0;
+}
+.side-head{padding:var(--side-pad);display:flex;align-items:flex-end;justify-content:space-between;}
+.side-head h1{font-size:13px;font-weight:650;letter-spacing:.2px;color:var(--ink);}
+.side-head .sub{font-family:var(--mono);font-size:10.5px;color:var(--ink-faint);margin-top:3px;letter-spacing:.3px;}
+.count-pill{
+  font-family:var(--mono);font-size:11px;font-weight:600;color:var(--ac);
+  background:rgba(var(--ac-rgb),0.12);border:1px solid rgba(var(--ac-rgb),0.25);
+  border-radius:6px;padding:3px 8px;
+  transition:color .2s var(--ease),background .2s var(--ease),border-color .2s var(--ease);
+}
+/* session progress */
+.progress-wrap{padding:0 18px 10px;}
+#win[data-density="compact"] .progress-wrap{padding:0 16px 8px;}
+.progress-track{height:3px;border-radius:3px;background:var(--border-soft);overflow:hidden;}
+.progress-fill{
+  height:100%;border-radius:3px;background:var(--ac);width:0%;
+  transition:width .42s var(--ease),background .2s var(--ease);
+  box-shadow:0 0 8px rgba(var(--ac-rgb),0.45);
+}
+
+.queue{flex:1;overflow-y:auto;padding:2px 12px 12px;min-height:0;}
+
+/* queue row */
+.qrow{
+  position:relative;
+  padding:var(--row-pt) 10px var(--row-pb) 44px;
+  border-radius:8px;cursor:grab;background:transparent;
+  transition:background .14s var(--ease),opacity .14s var(--ease);
+}
+.qrow:hover{background:rgba(255,255,255,0.035);}
+.qrow[data-selected="true"]{background:var(--sel-bg);}
+.qrow[data-selected="true"]:hover{background:var(--sel-bg);}
+.qrow.dragging{opacity:.4;cursor:grabbing;}
+.qrow:active{cursor:grabbing;}
+
+.qrow-rail{position:absolute;left:19.25px;width:var(--qrail-w);background:var(--qrail);
+  transition:background .2s var(--ease);}
+.qrow-rail.top{top:0;height:var(--node-c);}
+.qrow-rail.bot{top:var(--node-c);bottom:0;}
+.qrow.first .qrow-rail.top{display:none;}
+.qrow.last .qrow-rail.bot{display:none;}
+
+.qnode{
+  position:absolute;left:9px;top:calc(var(--node-c) - 11px);
+  width:22px;height:22px;border-radius:50%;
+  display:flex;align-items:center;justify-content:center;z-index:2;
+  font-family:var(--mono);font-size:10px;font-weight:700;
+  background:var(--node);color:var(--ink-dim);border:1px solid var(--rail-neutral);
+  transition:background .2s var(--ease),color .2s var(--ease),box-shadow .2s var(--ease),border-color .2s var(--ease);
+}
+.qrow[data-selected="true"] .qnode{
+  background:var(--ac);color:var(--ac-on);border-color:transparent;
+  box-shadow:0 0 0 4px rgba(var(--ac-rgb),0.16),0 0 10px rgba(var(--ac-rgb),0.35);
+}
+
+.qrow-main{display:flex;flex-direction:column;gap:5px;min-width:0;flex:1;}
+.qrow-titlerow{display:flex;align-items:center;gap:7px;min-width:0;}
+.qrow-title{
+  font-size:12.5px;font-weight:550;line-height:1.32;color:var(--ink);
+  display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;
+  overflow:hidden;flex:1;text-wrap:pretty;
+}
+.qrow-now{
+  flex:0 0 auto;display:none;font-family:var(--mono);font-size:8.5px;font-weight:700;
+  letter-spacing:.6px;color:var(--ac);background:rgba(var(--ac-rgb),0.14);
+  border-radius:4px;padding:2px 5px;
+}
+.qrow[data-selected="true"] .qrow-now{display:inline-block;}
+.qrow-meta{display:flex;align-items:center;gap:7px;}
+.qrow-via{font-family:var(--mono);font-size:10px;font-weight:600;color:var(--ink-dim2);letter-spacing:.2px;transition:color .2s var(--ease);}
+.qrow[data-selected="true"] .qrow-via{color:var(--ac);}
+.qrow-type{font-family:var(--mono);font-size:9.5px;color:var(--ink-faint);text-transform:uppercase;letter-spacing:.5px;}
+
+/* drag insertion line */
+.qrow-line{
+  position:absolute;left:8px;right:8px;height:2.5px;border-radius:2px;
+  background:var(--ac);box-shadow:0 0 8px rgba(var(--ac-rgb),0.6);
+  z-index:3;display:none;
+}
+.qrow-line.top{top:-2px;}
+.qrow-line.bot{top:auto;bottom:-2px;}
+.qrow-line.show{display:block;}
+
+/* sidebar footer (height matches action bar) */
+.side-foot{
+  border-top:1px solid var(--border-soft);padding:0 16px;
+  display:flex;align-items:center;justify-content:space-between;flex:0 0 auto;
+  height:var(--footer-h);
+}
+.side-foot .feeds{font-family:var(--mono);font-size:10.5px;color:var(--ink-faint);letter-spacing:.3px;}
+.ghost-btn{
+  font-family:var(--mono);font-size:10.5px;font-weight:600;color:var(--ink-muted);
+  border:1px solid var(--rail-neutral);border-radius:6px;padding:4px 9px;cursor:pointer;
+  display:flex;gap:6px;align-items:center;background:transparent;
+  transition:border-color .14s var(--ease),color .14s var(--ease),transform .08s var(--ease);
+}
+.ghost-btn:hover{border-color:var(--ac);color:var(--ac);}
+.ghost-btn:active{transform:scale(.96);}
+.ghost-btn .hint{opacity:.6;}
+
+/* ───────────────────────────── main pane ───────────────────────────── */
+.main{flex:1;display:flex;flex-direction:column;min-width:0;min-height:0;}
+
+.main-head{padding:var(--head-pad);border-bottom:1px solid var(--border-soft);}
+.reason-chip{
+  display:inline-block;font-family:var(--mono);font-size:10.5px;font-weight:600;
+  color:var(--ac);background:var(--reason-bg);border:1px solid rgba(var(--ac-rgb),0.22);
+  border-radius:5px;padding:3px 8px;margin-bottom:12px;
+}
+.main-title{
+  font-size:var(--title-size);font-weight:700;line-height:1.22;letter-spacing:-.3px;
+  color:var(--ink-bright);text-wrap:balance;
+}
+.main-meta{
+  display:flex;align-items:center;gap:14px;margin-top:12px;
+  font-family:var(--mono);font-size:11.5px;flex-wrap:wrap;
+}
+.main-meta .via{color:var(--ac);}
+.main-meta .dot{color:var(--hair);}
+.main-meta .type{color:var(--ink-dim);text-transform:uppercase;letter-spacing:.5px;}
+.main-meta .url{color:var(--ink-faint);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:340px;}
+
+.card-body{flex:1;overflow-y:auto;padding:var(--card-pad);min-height:0;}
+
+.view-switch{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;}
+.view-label{font-family:var(--mono);font-size:10px;font-weight:600;color:var(--ink-faint);letter-spacing:1.2px;text-transform:uppercase;}
+.segmented{display:flex;gap:2px;background:var(--raise);border:1px solid var(--border);border-radius:8px;padding:3px;}
+.seg-tab{
+  font-family:var(--mono);font-size:11px;font-weight:600;border-radius:6px;
+  padding:4px 12px;cursor:pointer;user-select:none;display:flex;align-items:center;
+  background:transparent;color:var(--ink-dim);border:none;
+  transition:background .14s var(--ease),color .14s var(--ease);
+}
+.seg-tab[aria-pressed="true"]{background:var(--ac);color:var(--ac-on);}
+.seg-tab .hint{opacity:.55;margin-left:6px;}
+.seg-tab[aria-pressed="true"] .hint{opacity:.7;}
+
+/* recap view */
+.recap-card{
+  background:var(--raise);border:1px solid var(--border);border-radius:10px;
+  padding:var(--recap-pad);font-size:var(--recap-size);line-height:1.65;color:#d7d1c4;
+  text-wrap:pretty;
+}
+#win[data-intensity="vivid"] .recap-card{border-left:3px solid var(--ac);}
+.tags{display:flex;gap:8px;flex-wrap:wrap;margin-top:18px;}
+.tag{
+  font-family:var(--mono);font-size:11px;color:var(--ink-muted);
+  background:var(--node);border:1px solid var(--border);border-radius:6px;padding:4px 9px;
+}
+.section-label{font-family:var(--mono);font-size:10px;font-weight:600;color:var(--ink-faint);letter-spacing:1.2px;text-transform:uppercase;}
+.overlaps{display:flex;flex-direction:column;gap:8px;margin-top:11px;}
+.overlap-row{
+  display:flex;align-items:center;gap:12px;background:var(--sunk);
+  border:1px solid var(--border-soft);border-radius:9px;padding:11px 14px;
+}
+.overlap-row .page{font-family:var(--mono);font-size:12px;color:var(--ac);font-weight:550;}
+.overlap-row .sep{width:1px;height:14px;background:var(--rail-neutral);}
+.overlap-row .note{font-size:12.5px;color:var(--ink-dim);flex:1;text-wrap:pretty;}
+.recap-stats{display:flex;gap:24px;margin-top:24px;font-family:var(--mono);font-size:10.5px;color:var(--ink-faint);}
+
+/* graph view */
+.root-node{display:flex;align-items:center;gap:11px;padding-bottom:2px;}
+.root-dot{
+  flex:0 0 auto;width:11px;height:11px;border-radius:50%;background:var(--ac);
+  box-shadow:0 0 0 4px rgba(var(--ac-rgb),0.16),0 0 10px rgba(var(--ac-rgb),0.3);
+}
+.root-title{font-size:14px;font-weight:650;color:var(--ink-bright);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:420px;}
+.root-badge{
+  font-family:var(--mono);font-size:10px;font-weight:600;color:var(--ink-dim);
+  background:var(--raise);border:1px solid var(--border);border-radius:5px;
+  padding:3px 8px;text-transform:uppercase;letter-spacing:.4px;white-space:nowrap;
+}
+.branch{margin-top:16px;}
+.branch + .branch{margin-top:18px;}
+.branch-label{font-family:var(--mono);font-size:10px;font-weight:600;color:var(--ink-faint);letter-spacing:1.2px;text-transform:uppercase;margin-bottom:2px;padding-left:36px;}
+.branch-rows{position:relative;}
+.grow{position:relative;padding:9px 0 9px 36px;}
+.grow .ctop{position:absolute;left:8px;top:0;width:var(--grail-w);height:16px;background:var(--grail);}
+.grow .ctick{position:absolute;left:8px;top:16px;width:13px;height:var(--grail-w);background:var(--grail);}
+.grow .cbot{position:absolute;left:8px;top:16px;bottom:0;width:var(--grail-w);background:var(--grail);}
+.grow.last .cbot{display:none;}
+.grow .gdot{position:absolute;left:18px;top:13px;width:8px;height:8px;border-radius:50%;background:var(--ac);box-shadow:0 0 0 3px rgba(var(--ac-rgb),0.14);}
+.grow .ghead{display:flex;align-items:baseline;gap:11px;flex-wrap:wrap;}
+.grow .gat{font-family:var(--mono);font-size:12px;font-weight:600;color:var(--ac);min-width:48px;}
+.grow .glabel{font-size:13.5px;color:var(--ink);font-weight:500;}
+.grow .gtarget{font-family:var(--mono);font-size:11px;color:var(--ink-faint);margin-top:4px;}
+.grow .gpage{font-family:var(--mono);font-size:12.5px;font-weight:600;color:var(--ac);}
+.grow .gnote{font-size:12.5px;color:var(--ink-dim);margin-top:4px;text-wrap:pretty;}
+
+/* empty state */
+.empty{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;padding:40px;text-align:center;}
+.empty .check{
+  width:56px;height:56px;border-radius:50%;display:flex;align-items:center;justify-content:center;
+  font-size:28px;color:var(--ac);font-family:var(--mono);
+  background:rgba(var(--ac-rgb),0.10);border:1px solid rgba(var(--ac-rgb),0.28);
+  box-shadow:0 0 0 6px rgba(var(--ac-rgb),0.06);
+}
+.empty h2{font-size:18px;font-weight:650;color:var(--ink);}
+.empty p{font-size:13.5px;color:var(--ink-dim);line-height:1.6;max-width:340px;text-wrap:pretty;}
+.empty p code{font-family:var(--mono);color:var(--ac);}
+.empty-btn{
+  margin-top:6px;font-family:var(--mono);font-size:12px;font-weight:600;color:var(--ac-on);
+  background:var(--ac);border:none;border-radius:7px;padding:9px 16px;cursor:pointer;
+  transition:filter .14s var(--ease),transform .08s var(--ease);
+}
+.empty-btn:hover{filter:brightness(1.08);}
+.empty-btn:active{transform:scale(.96);}
+
+/* ───────────────────────────── action bar ───────────────────────────── */
+.action-bar{
+  flex:0 0 auto;border-top:1px solid var(--border);background:var(--panel);
+  padding:var(--bar-pad);display:flex;align-items:center;gap:10px;
+}
+.btn{
+  display:flex;align-items:center;justify-content:center;gap:8px;
+  height:var(--btn-h);padding:var(--btn-pad);font-size:var(--btn-f);font-weight:600;
+  font-family:var(--ui);border-radius:8px;cursor:pointer;user-select:none;white-space:nowrap;
+  background:transparent;color:var(--ink-muted);border:1px solid var(--rail-neutral);
+  transition:filter .14s var(--ease),border-color .14s var(--ease),color .14s var(--ease),
+             background .14s var(--ease),transform .08s var(--ease),opacity .14s var(--ease);
+}
+.btn:active{transform:scale(.96);}
+.btn-primary{background:var(--ac);color:var(--ac-on);border-color:var(--ac);}
+.btn-primary:hover{filter:brightness(1.08);}
+.btn-outline:hover{border-color:var(--hair);color:var(--ink);}
+.btn-drop:hover{border-color:#8a5a45;color:#e0a890;}
+.btn[disabled]{
+  background:var(--raise);color:var(--ink-fainter);border-color:var(--border-soft);
+  cursor:default;opacity:.55;pointer-events:none;
+}
+.bar-divider{width:1px;height:22px;background:var(--border);margin:0 4px;}
+.bar-spacer{flex:1;}
+
+/* keyboard hint chips */
+.kbd{
+  font-family:var(--mono);font-size:10.5px;font-weight:700;line-height:1.5;
+  border-radius:4px;padding:1px 6px;
+  background:rgba(var(--ac-rgb),0.16);border:1px solid rgba(var(--ac-rgb),0.34);color:var(--ac);
+}
+.btn-primary .kbd{background:rgba(0,0,0,0.30);border-color:rgba(0,0,0,0.18);color:var(--ac-on);}
+.btn[disabled] .kbd{background:rgba(0,0,0,0.18);border-color:var(--border-soft);color:var(--ink-fainter);}
+
+/* ───────────────────────────── toast ───────────────────────────── */
+.toast{
+  position:absolute;bottom:78px;left:50%;
+  transform:translateX(-50%) translateY(12px);opacity:0;pointer-events:none;
+  font-family:var(--mono);font-size:12px;font-weight:600;color:var(--ac-on);
+  background:var(--ac);border-radius:8px;padding:8px 16px;
+  box-shadow:0 8px 24px rgba(0,0,0,0.4);
+  transition:opacity .2s var(--ease),transform .2s var(--ease);
+  z-index:20;
+}
+.toast.show{transform:translateX(-50%) translateY(0);opacity:1;}
+
+/* ───────────────────────────── enter animations ───────────────────────────── */
+@keyframes fadeUp{from{opacity:0;transform:translateY(8px);}to{opacity:1;transform:translateY(0);}}
+.enter{animation:fadeUp .42s var(--ease) both;}
+
+@media (max-width:1140px){
+  body{align-items:flex-start;}
+  #win{transform-origin:top center;}
+}
+</style>
+</head>
+<body>
+
+<div id="win">
+  <!-- title bar -->
+  <div class="titlebar">
+    <div class="lights"><span class="light"></span><span class="light"></span><span class="light"></span></div>
+    <div class="titlebar-title">Brain Feed — Review Queue</div>
+    <div class="titlebar-stat tnum" id="sessionStat">0 kept · 0 dropped · 0 skipped</div>
+  </div>
+
+  <!-- body -->
+  <div class="body">
+    <!-- sidebar -->
+    <aside class="sidebar">
+      <div class="side-head">
+        <div>
+          <h1>Review queue</h1>
+          <div class="sub">awaiting triage</div>
+        </div>
+        <div class="count-pill tnum" id="countPill">0</div>
+      </div>
+      <div class="progress-wrap">
+        <div class="progress-track"><div class="progress-fill" id="progressFill"></div></div>
+      </div>
+      <div class="queue scroll" id="queue"></div>
+      <div class="side-foot">
+        <span class="feeds">feeds: 4 active</span>
+        <button class="ghost-btn" id="rescanFoot" type="button">Rescan<span class="hint">r</span></button>
+      </div>
+    </aside>
+
+    <!-- main -->
+    <section class="main" id="main"></section>
+  </div>
+
+  <!-- toast -->
+  <div class="toast" id="toast"></div>
+</div>
+
+<script>
+"use strict";
+(function(){
+
+/* ─────────────────────────── palette (locked: amber) ─────────────────────────── */
+const PAL = {
+  amber: { h:'#d8a04a', rgb:'216,160,74', on:'#1a1916' },
+};
+
+/* ─────────────────────────── seed data ─────────────────────────── */
+function seed(){
+  return [
+    {
+      id:'arxiv', status:'queued',
+      title:'Attention Is All You Need, Revisited',
+      via:'arxiv-cs-cl', type:'paper',
+      url:'arxiv.org/abs/2406.99021',
+      reason:'matched filter: transformers',
+      summary:'A retrospective re-derivation of the original Transformer that re-runs the 2017 ablations at modern scale. Core claim: multi-head attention’s edge over recurrence holds, but the gap from positional encoding choices is far larger than first reported. Includes updated training curves and a cleaner notation for the attention operator.',
+      tags:['transformers','attention','architecture'],
+      overlaps:[
+        { page:'concepts/transformer', note:'updates §Architecture, adds 2024 ablation data' },
+        { page:'entities/vaswani-et-al', note:'new citation → follow-up work' },
+      ],
+      breakdown:[
+        { at:'§1', label:'Re-derivation of the attention operator', target:'concepts/transformer' },
+        { at:'§3', label:'Modern-scale ablations', target:'concepts/transformer' },
+        { at:'§5', label:'The positional-encoding gap', target:'entities/vaswani-et-al' },
+      ],
+      queued:'2h ago', len:'8,200 words', tokens:'~11k',
+    },
+    {
+      id:'hn', status:'queued',
+      title:'HN thread — are local LLMs finally good enough?',
+      via:'hn-ai', type:'article',
+      url:'news.ycombinator.com/item?id=99999999',
+      reason:'high score (480+) on topic: local-llms',
+      summary:'A 400-comment thread weighing whether 30B-class local models have crossed the “daily-driver” line. Strong disagreement: the pro camp cites privacy, offline use, and falling latency; the skeptics point at tool-use reliability and long-context degradation. Consensus forms around “good enough for drafting, not for agents.”',
+      tags:['local-llms','inference','privacy'],
+      overlaps:[
+        { page:'concepts/local-inference', note:'open question: where is the daily-driver threshold?' },
+      ],
+      breakdown:[
+        { at:'cluster 1', label:'Pro: privacy, offline, falling latency', target:'concepts/local-inference' },
+        { at:'cluster 2', label:'Skeptic: tool-use reliability, long-context decay', target:'concepts/local-inference' },
+        { at:'cluster 3', label:'Consensus: drafting, not agents', target:'concepts/local-inference' },
+      ],
+      queued:'5h ago', len:'12,400 words', tokens:'~16k',
+    },
+    {
+      id:'yt', status:'queued',
+      title:'Karpathy — Build a second brain with an LLM-maintained wiki',
+      via:'youtube-wl', type:'video',
+      url:'youtube.com/watch?v=aBcD1234xyz',
+      reason:'channel you follow: A. Karpathy',
+      summary:'Talk arguing you should let the model own and maintain a wiki rather than RAG over raw notes. The synthesis is precomputed once into cross-linked, auditable pages and kept current as sources arrive. Walks through the three-layer vault (immutable sources → AI-owned wiki → schema) and the capture/sync/lint loop.',
+      tags:['second-brain','knowledge-mgmt','agents'],
+      overlaps:[
+        { page:'concepts/llm-wiki', note:'primary source for the method — create page' },
+        { page:'index', note:'add to map of content' },
+      ],
+      breakdown:[
+        { at:'00:00', label:'Why not RAG over raw notes', target:'concepts/llm-wiki' },
+        { at:'04:10', label:'The three-layer vault', target:'concepts/llm-wiki' },
+        { at:'11:30', label:'The capture / sync / lint loop', target:'index' },
+        { at:'16:05', label:'Running it unattended (launchd)', target:'index' },
+      ],
+      queued:'1d ago', len:'18:42 video', tokens:'~9k',
+    },
+  ];
+}
+
+/* ─────────────────────────── state ─────────────────────────── */
+const state = {
+  items: seed(),
+  selectedId: 'hn',
+  view: 'recap',
+  history: [],
+  kept:0, dropped:0, skipped:0,
+  sessionTotal: 3,
+  accent:'amber', density:'comfortable', intensity:'calm',
+  // drag
+  dragId:null, dropBeforeId:null,
+};
+
+/* ─────────────────────────── dom refs ─────────────────────────── */
+const win        = document.getElementById('win');
+const queueEl    = document.getElementById('queue');
+const mainEl     = document.getElementById('main');
+const countPill  = document.getElementById('countPill');
+const progressEl = document.getElementById('progressFill');
+const sessionEl  = document.getElementById('sessionStat');
+const toastEl    = document.getElementById('toast');
+
+/* ─────────────────────────── helpers ─────────────────────────── */
+const esc = (s)=>String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const queueItems = ()=>state.items.filter(i=>i.status==='queued');
+const current = ()=>state.items.find(i=>i.id===state.selectedId && i.status==='queued');
+
+/* ─────────────────────────── theming (locked) ─────────────────────────── */
+function applyTheme(){
+  const A = PAL[state.accent] || PAL.amber;
+  win.style.setProperty('--ac', A.h);
+  win.style.setProperty('--ac-rgb', A.rgb);
+  win.style.setProperty('--ac-on', A.on);
+  win.setAttribute('data-density', state.density);
+  win.setAttribute('data-intensity', state.intensity);
+}
+
+/* ─────────────────────────── sidebar ─────────────────────────── */
+function renderSidebar(animate){
+  const q = queueItems();
+  countPill.textContent = q.length;
+  const triaged = state.sessionTotal - q.length;
+  const pct = state.sessionTotal ? Math.max(0, Math.min(100, (triaged/state.sessionTotal)*100)) : 0;
+  progressEl.style.width = pct + '%';
+
+  queueEl.innerHTML = q.map((it,i)=>{
+    const selected = it.id===state.selectedId;
+    const num = String(i+1).padStart(2,'0');
+    const cls = ['qrow', i===0?'first':'', i===q.length-1?'last':''].filter(Boolean).join(' ');
+    const delay = animate ? ' style="animation-delay:'+(i*70)+'ms"' : '';
+    const enter = animate ? ' enter' : '';
+    return ''+
+      '<div class="'+cls+enter+'" data-id="'+it.id+'" data-selected="'+selected+'" draggable="true"'+delay+'>'+
+        '<div class="qrow-line top"></div>'+
+        '<div class="qrow-line bot"></div>'+
+        '<div class="qrow-rail top"></div>'+
+        '<div class="qrow-rail bot"></div>'+
+        '<div class="qnode tnum">'+num+'</div>'+
+        '<div class="qrow-main">'+
+          '<div class="qrow-titlerow">'+
+            '<span class="qrow-title">'+esc(it.title)+'</span>'+
+            '<span class="qrow-now">NOW</span>'+
+          '</div>'+
+          '<div class="qrow-meta">'+
+            '<span class="qrow-via">via '+esc(it.via)+'</span>'+
+            '<span class="qrow-type">'+esc(it.type)+'</span>'+
+          '</div>'+
+        '</div>'+
+      '</div>';
+  }).join('');
+
+  // wire row interactions
+  queueEl.querySelectorAll('.qrow').forEach(row=>{
+    const id = row.dataset.id;
+    row.addEventListener('click', ()=>select(id));
+    row.addEventListener('dragstart', e=>onDragStart(id, row, e));
+    row.addEventListener('dragover',  e=>onDragOver(id, row, e));
+    row.addEventListener('drop',      e=>onDrop(e));
+    row.addEventListener('dragend',   ()=>onDragEnd());
+  });
+}
+
+/* lightweight selection update (no rebuild → smooth) */
+function applySelection(){
+  queueEl.querySelectorAll('.qrow').forEach(row=>{
+    row.setAttribute('data-selected', String(row.dataset.id===state.selectedId));
+  });
+}
+
+/* ─────────────────────────── main pane ─────────────────────────── */
+function renderMain(){
+  const cur = current();
+  const q = queueItems();
+  if(!cur){
+    mainEl.innerHTML =
+      '<div class="empty">'+
+        '<div class="check enter">✓</div>'+
+        '<h2 class="enter" style="animation-delay:70ms">Queue cleared</h2>'+
+        '<p class="enter" style="animation-delay:140ms">Everything kept is now in <code>sources/</code> and will be folded in on the next nightly <code>/sync</code>.</p>'+
+        '<button class="empty-btn enter" id="rescanEmpty" type="button" style="animation-delay:210ms">Rescan feeds</button>'+
+      '</div>'+
+      actionBarHTML();
+    mainEl.querySelector('#rescanEmpty').addEventListener('click', rescan);
+    wireActionBar();
+    return;
+  }
+
+  const A = PAL[state.accent] || PAL.amber;
+  const ov = cur.overlaps || [];
+  const bd = cur.breakdown || [];
+
+  const recapHTML =
+    '<div class="recap-card enter" style="animation-delay:60ms">'+esc(cur.summary)+'</div>'+
+    '<div class="tags enter" style="animation-delay:120ms">'+
+      cur.tags.map(t=>'<span class="tag">#'+esc(t)+'</span>').join('')+
+    '</div>'+
+    '<div class="enter" style="margin-top:24px;animation-delay:180ms">'+
+      '<div class="section-label" style="margin-bottom:11px">Will touch '+ov.length+' wiki page'+(ov.length===1?'':'s')+'</div>'+
+      '<div class="overlaps">'+
+        ov.map(o=>(
+          '<div class="overlap-row">'+
+            '<span class="page">'+esc(o.page)+'</span>'+
+            '<span class="sep"></span>'+
+            '<span class="note">'+esc(o.note)+'</span>'+
+          '</div>'
+        )).join('')+
+      '</div>'+
+    '</div>'+
+    '<div class="recap-stats enter" style="animation-delay:240ms">'+
+      '<span>queued '+esc(cur.queued)+'</span>'+
+      '<span>'+esc(cur.len)+'</span>'+
+      '<span>'+esc(cur.tokens)+' est.</span>'+
+    '</div>';
+
+  const graphRow = (inner, i, n, extra)=>(
+    '<div class="grow '+(i===n-1?'last':'')+'">'+
+      '<div class="ctop"></div><div class="ctick"></div><div class="cbot"></div><div class="gdot"></div>'+
+      inner+
+    '</div>'
+  );
+  const graphHTML =
+    '<div class="root-node enter">'+
+      '<div class="root-dot"></div>'+
+      '<div class="root-title">'+esc(cur.title)+'</div>'+
+      '<span class="root-badge">'+esc(cur.type)+' · '+esc(cur.len)+'</span>'+
+    '</div>'+
+    '<div class="branch enter" style="animation-delay:90ms">'+
+      '<div class="branch-label">Breakdown · '+bd.length+' segments</div>'+
+      '<div class="branch-rows">'+
+        bd.map((b,i)=>graphRow(
+          '<div class="ghead"><span class="gat">'+esc(b.at)+'</span><span class="glabel">'+esc(b.label)+'</span></div>'+
+          '<div class="gtarget">↳ feeds '+esc(b.target)+'</div>', i, bd.length
+        )).join('')+
+      '</div>'+
+    '</div>'+
+    '<div class="branch enter" style="animation-delay:170ms">'+
+      '<div class="branch-label">Maps to '+ov.length+' wiki page'+(ov.length===1?'':'s')+'</div>'+
+      '<div class="branch-rows">'+
+        ov.map((o,i)=>graphRow(
+          '<div class="gpage">'+esc(o.page)+'</div>'+
+          '<div class="gnote">'+esc(o.note)+'</div>', i, ov.length
+        )).join('')+
+      '</div>'+
+    '</div>';
+
+  mainEl.innerHTML =
+    '<div class="main-head">'+
+      '<span class="reason-chip enter">⤳ '+esc(cur.reason)+'</span>'+
+      '<div class="main-title enter" style="animation-delay:60ms">'+esc(cur.title)+'</div>'+
+      '<div class="main-meta enter" style="animation-delay:120ms">'+
+        '<span class="via">'+esc(cur.via)+'</span>'+
+        '<span class="dot">·</span>'+
+        '<span class="type">'+esc(cur.type)+'</span>'+
+        '<span class="dot">·</span>'+
+        '<span class="url">'+esc(cur.url)+'</span>'+
+      '</div>'+
+    '</div>'+
+    '<div class="card-body scroll">'+
+      '<div class="view-switch">'+
+        '<div class="view-label">'+(state.view==='graph'?'Source breakdown':'Recap preview')+'</div>'+
+        '<div class="segmented">'+
+          '<button class="seg-tab" data-view="recap" type="button" aria-pressed="'+(state.view==='recap')+'">Recap</button>'+
+          '<button class="seg-tab" data-view="graph" type="button" aria-pressed="'+(state.view==='graph')+'">Graph<span class="hint">g</span></button>'+
+        '</div>'+
+      '</div>'+
+      (state.view==='graph' ? graphHTML : recapHTML)+
+    '</div>'+
+    actionBarHTML();
+
+  mainEl.querySelectorAll('.seg-tab').forEach(t=>{
+    t.addEventListener('click', ()=>setView(t.dataset.view));
+  });
+  wireActionBar();
+}
+
+/* ─────────────────────────── action bar ─────────────────────────── */
+function actionBarHTML(){
+  const has = !!current();
+  const noHist = state.history.length===0;
+  const chip = (k)=>'<span class="kbd">'+k+'</span>';
+  const btn = (id,cls,label,key,extraChipCls,disabled)=>(
+    '<button class="btn '+cls+'" data-act="'+id+'" type="button"'+(disabled?' disabled':'')+'>'+
+      '<span>'+label+'</span><span class="kbd">'+key+'</span>'+
+    '</button>'
+  );
+  return ''+
+    '<div class="action-bar">'+
+      btn('keep','btn-primary','Keep → sources','k',null,!has)+
+      '<div class="bar-divider"></div>'+
+      btn('drop','btn-outline btn-drop','Drop','d',null,!has)+
+      btn('skip','btn-outline','Skip','s',null,!has)+
+      btn('open','btn-outline','Open URL','o',null,!has)+
+      '<div class="bar-spacer"></div>'+
+      btn('undo','btn-outline','Undo','u',null,noHist)+
+    '</div>';
+}
+function wireActionBar(){
+  mainEl.querySelectorAll('.action-bar .btn').forEach(b=>{
+    const act = b.dataset.act;
+    b.addEventListener('click', ()=>{
+      if(act==='keep') triage('kept');
+      else if(act==='drop') triage('dropped');
+      else if(act==='skip') triage('skipped');
+      else if(act==='open') openUrl();
+      else if(act==='undo') undo();
+    });
+  });
+}
+
+/* ─────────────────────────── actions ─────────────────────────── */
+function select(id){
+  if(state.selectedId===id) return;
+  state.selectedId = id;
+  applySelection();
+  renderMain();
+}
+function setView(v){
+  if(state.view===v) return;
+  state.view = v;
+  renderMain();
+}
+function move(dir){
+  const q = queueItems();
+  if(!q.length) return;
+  let idx = q.findIndex(i=>i.id===state.selectedId);
+  if(idx<0) idx=0;
+  const next = q[Math.max(0, Math.min(q.length-1, idx+dir))];
+  if(next && next.id!==state.selectedId) select(next.id);
+}
+function triage(status){
+  const cur = current();
+  if(!cur) return;
+  const q = queueItems();
+  const idx = q.findIndex(i=>i.id===cur.id);
+  state.items = state.items.map(i=>i.id===cur.id ? {...i, status} : i);
+  const remaining = queueItems();
+  state.selectedId = remaining.length ? remaining[Math.min(idx, remaining.length-1)].id : null;
+  state.history.push({ id:cur.id, action:status });
+  if(status==='kept') state.kept++;
+  else if(status==='dropped') state.dropped++;
+  else if(status==='skipped') state.skipped++;
+  const labels = { kept:'Kept → sources/', dropped:'Dropped', skipped:'Skipped' };
+  renderSidebar(false);
+  renderMain();
+  updateSessionStat();
+  toast(labels[status]);
+}
+function undo(){
+  if(!state.history.length) return;
+  const last = state.history[state.history.length-1];
+  state.items = state.items.map(i=>i.id===last.id ? {...i, status:'queued'} : i);
+  state.history = state.history.slice(0,-1);
+  state.selectedId = last.id;
+  if(last.action==='kept') state.kept--;
+  else if(last.action==='dropped') state.dropped--;
+  else if(last.action==='skipped') state.skipped--;
+  renderSidebar(false);
+  renderMain();
+  updateSessionStat();
+  toast('Undone');
+}
+function openUrl(){
+  const cur = current();
+  if(cur) toast('Opening ' + cur.url);
+}
+function rescan(){
+  state.items = seed();
+  state.selectedId = 'arxiv';
+  state.view = 'recap';
+  state.history = [];
+  state.kept = state.dropped = state.skipped = 0;
+  state.sessionTotal = queueItems().length;
+  renderSidebar(true);
+  renderMain();
+  updateSessionStat();
+  toast('Rescanned — 3 items queued');
+}
+function updateSessionStat(){
+  sessionEl.textContent = state.kept+' kept · '+state.dropped+' dropped · '+state.skipped+' skipped';
+}
+
+/* ─────────────────────────── drag & drop ─────────────────────────── */
+function clearDropLines(){
+  queueEl.querySelectorAll('.qrow-line.show').forEach(l=>l.classList.remove('show'));
+}
+function onDragStart(id, row, e){
+  state.dragId = id;
+  state.dropBeforeId = null;
+  if(e.dataTransfer){
+    e.dataTransfer.effectAllowed = 'move';
+    try{ e.dataTransfer.setData('text/plain', id); }catch(_){}
+  }
+  // defer so the drag image is captured before dimming
+  requestAnimationFrame(()=>row.classList.add('dragging'));
+}
+function onDragOver(id, row, e){
+  if(!state.dragId) return;
+  e.preventDefault();
+  if(e.dataTransfer) e.dataTransfer.dropEffect = 'move';
+  clearDropLines();
+  const rect = row.getBoundingClientRect();
+  const before = e.clientY < rect.top + rect.height/2;
+  if(before){
+    row.querySelector('.qrow-line.top').classList.add('show');
+    state.dropBeforeId = id;
+  } else {
+    // after this row → before the next row, or at the end
+    const q = queueItems();
+    const i = q.findIndex(x=>x.id===id);
+    if(i>=0 && i < q.length-1){
+      state.dropBeforeId = q[i+1].id;
+      const next = queueEl.querySelector('.qrow[data-id="'+q[i+1].id+'"]');
+      if(next) next.querySelector('.qrow-line.top').classList.add('show');
+    } else {
+      row.querySelector('.qrow-line.bot').classList.add('show');
+      state.dropBeforeId = null; // end
+    }
+  }
+}
+function onDrop(e){
+  e.preventDefault();
+  const srcId = state.dragId;
+  const beforeId = state.dropBeforeId;
+  finishDrag();
+  if(!srcId) return;
+  if(srcId===beforeId) return;
+
+  const items = [...state.items];
+  const from = items.findIndex(i=>i.id===srcId);
+  if(from<0) return;
+  const [moved] = items.splice(from,1);
+  let to;
+  if(beforeId==null){ to = items.length; }
+  else {
+    to = items.findIndex(i=>i.id===beforeId);
+    if(to<0) to = items.length;
+  }
+  items.splice(to, 0, moved);
+  // no-op guard: if order unchanged, skip the toast
+  const changed = items.map(i=>i.id).join() !== state.items.map(i=>i.id).join();
+  state.items = items;
+  renderSidebar(false);
+  if(changed) toast('Reordered');
+}
+function onDragEnd(){ finishDrag(); }
+function finishDrag(){
+  state.dragId = null;
+  state.dropBeforeId = null;
+  clearDropLines();
+  queueEl.querySelectorAll('.qrow.dragging').forEach(r=>r.classList.remove('dragging'));
+}
+
+/* ─────────────────────────── toast ─────────────────────────── */
+let toastTimer = null;
+function toast(msg){
+  clearTimeout(toastTimer);
+  toastEl.textContent = msg;
+  toastEl.classList.add('show');
+  toastTimer = setTimeout(()=>toastEl.classList.remove('show'), 1600);
+}
+
+/* ─────────────────────────── controls ─────────────────────────── */
+function wireControls(){
+  document.getElementById('rescanFoot').addEventListener('click', rescan);
+}
+
+/* ─────────────────────────── keyboard ─────────────────────────── */
+function onKey(e){
+  if(e.metaKey || e.ctrlKey || e.altKey) return;
+  const tag = (e.target && e.target.tagName) || '';
+  if(tag==='INPUT' || tag==='TEXTAREA') return;
+  const k = e.key.toLowerCase();
+  if(k==='k'){ e.preventDefault(); triage('kept'); }
+  else if(k==='d'){ e.preventDefault(); triage('dropped'); }
+  else if(k==='s'){ e.preventDefault(); triage('skipped'); }
+  else if(k==='o'){ e.preventDefault(); openUrl(); }
+  else if(k==='u'){ e.preventDefault(); undo(); }
+  else if(k==='r'){ e.preventDefault(); rescan(); }
+  else if(k==='g'){ e.preventDefault(); setView(state.view==='graph'?'recap':'graph'); }
+  else if(e.key==='ArrowDown'){ e.preventDefault(); move(1); }
+  else if(e.key==='ArrowUp'){ e.preventDefault(); move(-1); }
+}
+
+/* ─────────────────────────── boot ─────────────────────────── */
+applyTheme();
+renderSidebar(true);
+renderMain();
+updateSessionStat();
+wireControls();
+window.addEventListener('keydown', onKey);
+
+})();
+</script>
+</body>
+</html>
