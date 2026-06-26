@@ -364,3 +364,42 @@ Turns capture from push-only into pull: the brain now feeds itself unattended.
   tonight's `/sync`; the queue awaits `brain-feed review`. Now 9 sources, 25 in queue.
 - **Not committed.** `feeds.toml` + the 5 new `sources/` files are left uncommitted for the
   human (deposits are normally folded by the nightly `/sync` PR flow).
+
+## 2026-06-26 — /sync (reconcile 6-source backlog)
+
+- **sources (6 processed):** `2026-06-24-2025-llm-year-in-review`,
+  `2026-06-24-sequoia-ascent-2026-summary` (both Karpathy, via `andrej-karpathy`);
+  `2026-06-24-datasette-1-0a35`, `2026-06-24-opfs-pyodide-test-harness`,
+  `2026-06-24-quoting-tom-macwright` (Simon Willison, via `simon-willison`);
+  `2026-06-24-run-parallel-sessions-with-worktrees-claude-code-docs` (Claude Code docs).
+  The three earlier sources (karpathy-llm-wiki, the cleanup-function war story, testing
+  -from-extension) were already recapped and untouched.
+- **recaps (6 created):** one per source under `wiki/recaps/`.
+- **wiki — concepts created (13):** `reinforcement-learning-from-verifiable-rewards`,
+  `verifiability`, `jagged-intelligence`, `ghosts-vs-animals`, `software-3-0`,
+  `vibe-coding`, `agentic-engineering`, `agent-native-infrastructure`, `llm-app-layer`,
+  `llm-gui`, `git-worktrees`, `ai-slop`, `outsourcing-thinking-vs-understanding`.
+- **wiki — concepts updated (3):** `llm-wiki` (+Software 3.0 framing, source added),
+  `retrieval-augmented-generation` (+Sequoia contrast), `second-brain`
+  (+understanding-tool framing).
+- **wiki — entities created (10):** `openai`, `anthropic`, `cursor`, `codex`,
+  `google-gemini`, `simon-willison`, `datasette`, `pyodide`, `tom-macwright`,
+  `sequoia-capital`.
+- **wiki — entities updated (2):** `andrej-karpathy` and `claude-code` both expanded and
+  promoted `stub → active` (Karpathy now the hub for the Software-3.0/jagged-intelligence
+  clusters; Claude Code gains worktrees + local-first "AI on your computer" framing).
+- **index:** rewrote Top entities (grouped: people / AI labs & tools / data & web tooling
+  / inference providers) and Top concepts (grouped: knowledge mgmt / shape of LLM
+  intelligence / Software 3.0 & agentic coding / risks & resilience); added a
+  2026-06-26 "Recently updated" entry. Bumped `updated:`.
+- **dedup decisions:** the two Karpathy essays overlap heavily (ghosts-vs-animals, jagged
+  intelligence, vibe coding, RLVR/verifiability, MenuGen, LLM wiki). Each shared theme was
+  written **once** as a concept page citing **both** sources, rather than duplicated.
+  Split closely-related-but-distinct ideas into separate cross-linked pages: RLVR (the
+  training stage) vs. verifiability (the predictive framework); jagged-intelligence (the
+  spiky capability) vs. ghosts-vs-animals (the entity framing).
+- **notes / non-obvious:** `Codex 5.5` is the model Karpathy used to *generate* the
+  Sequoia summary+transcript — the source is partly AI-authored (flagged on the recap).
+  Stephanie Zhan and Eureka Labs were mentioned but left as plain text (no dedicated
+  pages yet) — candidates for `/lint` to surface. No contradictions found between sources;
+  themes are mutually reinforcing. Working tree left uncommitted per request.
