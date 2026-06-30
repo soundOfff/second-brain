@@ -318,17 +318,21 @@ class ReviewApp:
 
         self.items: list[Item] = []
         self.sel = 0
-        self.view = "recap"               # 'recap' | 'graph'
+        self.view = "recap"               # 'recap' | 'graph'  (per-item card)
+        self.screen = "review"            # 'review' | 'stats' (whole main pane)
         self.kept = 0
         self.dropped = 0
         self.undo_rec: dict | None = None  # single-level undo
         self.drag: dict | None = None
         self._toast_after = None
+        self._db = None                   # cached sqlite connection (lazy)
+        self._stats_cache: list[dict] | None = None
 
         root.title("Brain Feed — Review Queue")
         root.geometry("1120x740")
         root.minsize(900, 600)
         root.configure(bg=BASE["bg"])
+        root.protocol("WM_DELETE_WINDOW", self._on_close)
 
         self._init_fonts()
         self._bind_keys()
@@ -392,7 +396,8 @@ class ReviewApp:
         b("<u>", lambda e: self.do_undo())
         b("<r>", lambda e: self.do_rescan())
         b("<g>", lambda e: self.toggle_view())
-        b("<q>", lambda e: self.root.destroy())
+        b("<t>", lambda e: self.toggle_screen())
+        b("<q>", lambda e: self._on_close())
         b("<Down>", lambda e: self.move(1))
         b("<Up>", lambda e: self.move(-1))
 
@@ -423,6 +428,8 @@ class ReviewApp:
         root_frame = tk.Frame(self.root, bg=BASE["bg"])
         root_frame.pack(fill="both", expand=True)
 
+        self._build_topbar(root_frame)
+
         body = tk.Frame(root_frame, bg=BASE["bg"])
         body.pack(fill="both", expand=True)
 
@@ -435,6 +442,31 @@ class ReviewApp:
 
         self.render_queue()
         self.render_main()
+
+    # -- top tab bar (Review Queue ↔ Feed Stats) -------------------------------
+    def _build_topbar(self, parent) -> None:
+        t = self.t
+        bar = tk.Frame(parent, bg=BASE["panel"], height=40)
+        bar.pack(side="top", fill="x")
+        bar.pack_propagate(False)
+        tk.Frame(bar, bg=BASE["border"], height=1).pack(side="bottom", fill="x")
+        seg = tk.Frame(bar, bg=BASE["raise"], highlightthickness=1,
+                       highlightbackground=BASE["border"])
+        seg.pack(side="left", padx=t["head_padx"], pady=6)
+        self._screen_tab(seg, "Review Queue", "review")
+        self._screen_tab(seg, "Feed Stats  t", "stats")
+
+    def _screen_tab(self, parent, label, value):
+        t = self.t
+        on = (self.screen == value)
+        cell = tk.Frame(parent, bg=(t["ac"] if on else BASE["raise"]))
+        cell.pack(side="left", padx=2, pady=2)
+        lab = tk.Label(cell, text=label, bg=cell["bg"],
+                       fg=(t["ac_on"] if on else BASE["ink_dim"]),
+                       font=self.font("mono", 11, "bold"), padx=12, pady=4)
+        lab.pack()
+        for w in (cell, lab):
+            w.bind("<Button-1>", lambda e: self.set_screen(value))
 
     # -- sidebar ---------------------------------------------------------------
     def _build_sidebar(self, parent) -> None:
@@ -759,7 +791,7 @@ class ReviewApp:
         return max(0, min(len(self.items) - 1, int(self.qcanvas.canvasy(y) // self.t["row_h"])))
 
     def _q_press(self, e):
-        if not self.items:
+        if not self.items or self.screen != "review":
             return
         idx = self._row_at(e.y)
         self.sel = idx
@@ -814,6 +846,10 @@ class ReviewApp:
             w.destroy()
         for w in self.actionrow.winfo_children():
             w.destroy()
+
+        if self.screen == "stats":
+            self._render_stats()      # global view; works with an empty queue
+            return
 
         cur = self.current()
         self._render_actions(cur)
@@ -1044,15 +1080,18 @@ class ReviewApp:
 
     def do_keep(self):
         cur = self.current()
-        if cur is None:
+        if cur is None or self.screen != "review":
             return
         idx = self.sel
         if cur.path is not None:
             text = cur.path.read_text(encoding="utf-8", errors="replace")
             dest = brain_feed.place(text, cur.path.name, SOURCES, VAULT, check_review=False)
+            item_id = cur.path.stem
             cur.path.unlink()
+            ts = self._log_decision(cur.via, item_id, "keep")
             self.undo_rec = {"kind": "keep", "name": cur.path.name, "text": text,
-                             "placed": dest, "item": cur, "idx": idx}
+                             "placed": dest, "item": cur, "idx": idx,
+                             "decision_ts": ts, "item_id": item_id}
             self.flash(f"Kept → {dest.relative_to(VAULT)}")
         else:
             self.undo_rec = {"kind": "keep", "item": cur, "idx": idx, "placed": None}
@@ -1062,14 +1101,17 @@ class ReviewApp:
 
     def do_drop(self):
         cur = self.current()
-        if cur is None:
+        if cur is None or self.screen != "review":
             return
         idx = self.sel
         if cur.path is not None:
             text = cur.path.read_text(encoding="utf-8", errors="replace")
+            item_id = cur.path.stem
             cur.path.unlink()
+            ts = self._log_decision(cur.via, item_id, "drop")
             self.undo_rec = {"kind": "drop", "name": cur.path.name, "text": text,
-                             "placed": None, "item": cur, "idx": idx}
+                             "placed": None, "item": cur, "idx": idx,
+                             "decision_ts": ts, "item_id": item_id}
         else:
             self.undo_rec = {"kind": "drop", "item": cur, "idx": idx, "placed": None}
         self.dropped += 1
@@ -1078,20 +1120,22 @@ class ReviewApp:
 
     def do_skip(self):
         """Non-destructive: leave the item queued, just advance."""
-        if not self.items:
+        if not self.items or self.screen != "review":
             return
         self.move(1)
         self.flash("Skipped — still queued")
 
     def do_undo(self):
         u = self.undo_rec
-        if not u:
+        if not u or self.screen != "review":
             return
         cur = u["item"]
         if cur.path is not None:
             if u["kind"] == "keep" and u.get("placed") and Path(u["placed"]).exists():
                 Path(u["placed"]).unlink()
             cur.path.write_text(u["text"], encoding="utf-8")
+            if u.get("decision_ts") is not None and u.get("item_id"):
+                self._delete_decision(u["item_id"], u["decision_ts"])
         if u["kind"] == "keep":
             self.kept = max(0, self.kept - 1)
         else:
@@ -1105,6 +1149,8 @@ class ReviewApp:
         self.flash(f"Undone — {cur.title[:32]} back in queue")
 
     def open_url(self):
+        if self.screen != "review":
+            return
         cur = self.current()
         if cur and cur.url:
             url = cur.url if "://" in cur.url else "https://" + cur.url
@@ -1137,6 +1183,131 @@ class ReviewApp:
 
     def toggle_view(self):
         self.set_view("recap" if self.view == "graph" else "graph")
+
+    # -- top-level screen (Review Queue ↔ Feed Stats) --------------------------
+    def set_screen(self, s: str):
+        if self.screen == s:
+            return
+        self.screen = s
+        if s == "stats":
+            self.refresh_stats()      # recompute from disk + db on open
+        self.rebuild()                # re-highlight the top tabs + swap main pane
+
+    def toggle_screen(self):
+        self.set_screen("stats" if self.screen == "review" else "review")
+
+    # -- sqlite connection lifecycle (lazy, cached on the app) -----------------
+    def _db_conn(self):
+        """Lazy cached connection. Returns None if it can't be opened — logging then
+        silently no-ops, because triage must never crash on a db hiccup."""
+        if self._db is None:
+            try:
+                self._db = brain_feed.db_connect(brain_feed.DB_PATH)
+                self._db.execute("PRAGMA busy_timeout=3000")  # tolerate CLI contention
+            except Exception:
+                self._db = None
+        return self._db
+
+    def _log_decision(self, feed_id, item_id, action):
+        con = self._db_conn()
+        if con is None:
+            return None
+        try:
+            ts = brain_feed.log_decision(con, feed_id, item_id, action)
+            con.commit()
+            self._stats_cache = None
+            return ts
+        except Exception:
+            return None
+
+    def _delete_decision(self, item_id, ts):
+        con = self._db_conn()
+        if con is None:
+            return
+        try:
+            brain_feed.delete_decision(con, item_id, ts)
+            con.commit()
+            self._stats_cache = None
+        except Exception:
+            pass
+
+    def _on_close(self):
+        if self._db is not None:
+            try:
+                self._db.commit()
+                self._db.close()
+            except Exception:
+                pass
+        self.root.destroy()
+
+    # -- feed stats screen -----------------------------------------------------
+    def refresh_stats(self):
+        """Recompute per-feed stats from disk + db. Called when the screen is opened."""
+        try:
+            con = self._db_conn()
+            cfg = brain_feed.load_config(brain_feed.CONFIG)
+            self._stats_cache = brain_feed.feed_stats(con, cfg) if con else []
+        except Exception:
+            self._stats_cache = []
+
+    def _render_stats(self):
+        t = self.t
+        # header
+        hpad = tk.Frame(self.head, bg=BASE["bg"])
+        hpad.pack(fill="x", padx=t["head_padx"], pady=(t["head_pady"], t["head_pady"] - 6))
+        tk.Label(hpad, text="Feed Stats", bg=BASE["bg"], fg=BASE["ink_bright"],
+                 font=self.font("ui", t["title"], "bold")).pack(anchor="w")
+        tk.Label(hpad, text="all feeds · keep-rate tracked going forward",
+                 bg=BASE["bg"], fg=BASE["ink_faint"],
+                 font=self.font("mono", 10)).pack(anchor="w", pady=(4, 0))
+
+        pad = tk.Frame(self.card.inner, bg=BASE["bg"])
+        pad.pack(fill="both", expand=True, padx=t["card_padx"], pady=t["card_pady"])
+
+        rows = self._stats_cache or []
+        cols = [("FEED", "id", 22), ("ADAPTER", "adapter", 9), ("TRUST", "trust", 7),
+                ("CAP", "cap", 5), ("SEEN", "total_seen", 6), ("TODAY", "today_seen", 7),
+                ("QUEUED", "queued", 8), ("KEEP-RATE", "keep_rate", 11)]
+        table = tk.Frame(pad, bg=BASE["raise"], highlightthickness=1,
+                         highlightbackground=BASE["border"])
+        table.pack(fill="x")
+        hdr = tk.Frame(table, bg=BASE["raise"])
+        hdr.pack(fill="x")
+        for i, (label, _key, w) in enumerate(cols):
+            tk.Label(hdr, text=label, bg=BASE["raise"], fg=BASE["ink_faint"],
+                     font=self.font("mono", 10, "bold"), width=w, anchor="w",
+                     padx=8, pady=8).grid(row=0, column=i, sticky="w")
+        for row in rows:
+            rf = tk.Frame(table, bg=BASE["raise"])
+            rf.pack(fill="x")
+            tk.Frame(rf, bg=BASE["border_soft"], height=1).pack(fill="x")
+            line = tk.Frame(rf, bg=BASE["raise"])
+            line.pack(fill="x")
+            for i, (_label, key, w) in enumerate(cols):
+                val = row[key]
+                if key == "keep_rate":
+                    text = "N/A" if val is None else f"{val * 100:.0f}%"
+                    fg = BASE["ink_dim2"] if val is None else t["ac"]
+                else:
+                    text = str(val)
+                    fg = BASE["ink"] if key == "id" else BASE["ink_muted"]
+                tk.Label(line, text=text, bg=BASE["raise"], fg=fg,
+                         font=self.font("mono", 11), width=w, anchor="w",
+                         padx=8, pady=7).grid(row=0, column=i, sticky="w")
+
+        if not rows:
+            tk.Label(pad, text="No feeds configured (feeds.toml).", bg=BASE["bg"],
+                     fg=BASE["ink_dim"], font=self.font("ui", 13)).pack(anchor="w", pady=24)
+
+        note = tk.Frame(pad, bg=BASE["bg"])
+        note.pack(fill="x", pady=(18, 0))
+        tk.Label(note, text="WHY SOME SHOW N/A", bg=BASE["bg"], fg=BASE["ink_faint"],
+                 font=self.font("mono", 10, "bold")).pack(anchor="w", pady=(0, 6))
+        tk.Label(note, text="Keep-rate is tracked going forward: a feed needs at least 10 "
+                 "keep/drop decisions before a number is shown. Auto-trust feeds never "
+                 "enter the review queue, so they stay N/A by design.",
+                 bg=BASE["bg"], fg=BASE["ink_dim2"], font=self.font("ui", 12),
+                 justify="left", wraplength=self._wrap()).pack(anchor="w")
 
     # -- toast -----------------------------------------------------------------
     def flash(self, msg: str):

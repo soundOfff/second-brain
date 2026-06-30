@@ -412,3 +412,39 @@ Turns capture from push-only into pull: the brain now feeds itself unattended.
 - **Verified.** `python3 -m py_compile bin/brain-feed-gui.py` passes. The interactive
   trackpad/wheel + drag-while-scrolled test on the native app is the human's to run
   (`bin/brain-feed-gui.sh --demo`, overflow the queue, scroll the sidebar).
+
+## 2026-06-30 — feature: Feed Stats + keep-rate (desktop triage app) [issue #6]
+
+- **Why.** Issue #6's PRD asked for a *browser* review UI with a Feed Stats tab. On
+  inspection the browser HTML (`bin/gui/review-queue/index.html`) is a non-functional
+  mockup and the working triage surface is the Tkinter desktop app (`bin/brain-feed-gui.py`).
+  The human chose **option B**: skip the browser UI, add the genuinely-missing half — per-feed
+  **statistics + keep-rate** — to the desktop app. Mechanical only (files + sqlite, no LLM),
+  consistent with ADR-0001.
+- **Decision tracking (`bin/brain-feed.py`).** New `decisions` table in `.brain/feed-state.db`
+  (`feed_id, item_id, action, timestamp`, PK `(item_id, timestamp)`), created idempotently in
+  `db_connect()`. Added `log_decision` (INSERT OR IGNORE, returns ts), `delete_decision` (undo),
+  `compute_keep_rate` (None below 10 decisions, else kept/(kept+dropped)), `_queued_counts`
+  (scan `.brain/review/` by `via:`), and `feed_stats` (per-feed dict; sort rate-desc, N/A last,
+  id-stable). CLI `review()` now logs every keep/drop via a `_safe_log` wrapper that never
+  aborts triage; `status()` gained a keep-rate column.
+- **No `brain_lib.py`.** The PRD's extract-to-shared-module step was for sharing with a web
+  server that option B doesn't build; the existing `brain_feed` module already serves both the
+  CLI and the GUI, so the helpers live there.
+- **GUI (`bin/brain-feed-gui.py`).** Top-level "Review Queue ↔ Feed Stats" tab bar (`t` toggles),
+  a read-only stats table (feed/adapter/trust/cap/seen/today/queued/keep-rate) with a
+  "tracked going forward" note, drawn with the existing dark theme. New `self.screen` state
+  (distinct from the per-item recap/outline `view`) so stats is viewable even with an empty
+  queue; per-item actions (k/d/s/o/u + queue clicks) are guarded inert on the stats screen.
+  `do_keep`/`do_drop` log decisions (feed=`via`, item=`path.stem`); `do_undo` deletes the row.
+  Lazy cached db connection (`busy_timeout=3000`), committed/closed on window close; logging
+  failures silently no-op so triage never crashes.
+- **Tests (first suite).** `bin/tests/test_decisions.py` + `test_feed_stats.py` (stdlib
+  `unittest`, temp vault per test, module loaded via importlib). 20 tests, all green:
+  `python3 -m unittest discover -s bin/tests -t bin`.
+- **Verified.** Unit suite green; `py_compile` clean; CLI `status` shows keep-rate; `review()`
+  logs keep/drop and moves/deletes files (checked in an isolated temp vault, not the real
+  `sources/`); GUI constructs headless, switches to the stats screen rendering all 5 feeds,
+  guards hold, closes cleanly. `.brain/feed-state.db` stays gitignored.
+- **Untouched.** No browser UI built; `feeds.toml`, `sources/`, the Tkinter triage flow and
+  the existing review-queue mockup are unchanged.
