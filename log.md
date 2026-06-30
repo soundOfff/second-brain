@@ -389,3 +389,26 @@ Turns capture from push-only into pull: the brain now feeds itself unattended.
   over 1253px of content, `scrollTop` reaches the 766px max → scrolls. The change is a
   no-op in Chrome (same value the stretch already produced). The decisive WebKit/Safari
   test on the Mac UI is the human's to eyeball on reload.
+
+## 2026-06-30 — fix: review-queue sidebar won't scroll (issue #4)
+
+- **Why.** GitHub issue #4: in the **native** Brain Feed review-queue app (the Tkinter
+  desktop GUI, `bin/brain-feed-gui.py` — not the WebKit `index.html` prototype), the left
+  **Review queue** sidebar that lists items awaiting triage didn't scroll. With more
+  queued items than fit the sidebar height, the overflow was clipped and the bottom items
+  couldn't be reached or selected. Reported during a Mac UI QA pass.
+- **Root cause.** The sidebar queue is a hand-drawn `tk.Canvas` (`self.qcanvas`).
+  `render_queue()` already set the canvas `scrollregion` to the full content height
+  (`0,0,W,n*row_h`), but **nothing was bound to scroll it** — no mouse-wheel/trackpad
+  handler and no scrollbar. The content extended past the viewport with no way to pan.
+- **Fix.** Bound wheel events to `self.qcanvas`, mirroring the proven pattern already used
+  by the right-pane `ScrollFrame`: `<MouseWheel>` → new `_q_wheel` (`yview_scroll` by
+  `±1 units` on `e.delta` sign) plus `<Button-4>`/`<Button-5>` for X11-style wheels.
+  Wheel-only, no visible scrollbar — consistent with `ScrollFrame`. No other changes
+  needed: `scrollregion` is already maintained per render; drag-reorder already hit-tests
+  via `qcanvas.canvasy(e.y)` so it stays correct while scrolled; header and Rescan footer
+  are separate frames outside the canvas, so they stay pinned; Canvas `confine` (default
+  `True`) re-clamps the view as the queue shrinks during triage.
+- **Verified.** `python3 -m py_compile bin/brain-feed-gui.py` passes. The interactive
+  trackpad/wheel + drag-while-scrolled test on the native app is the human's to run
+  (`bin/brain-feed-gui.sh --demo`, overflow the queue, scroll the sidebar).

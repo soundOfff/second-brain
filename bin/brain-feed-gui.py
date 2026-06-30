@@ -479,6 +479,9 @@ class ReviewApp:
         self.qcanvas.bind("<B1-Motion>", self._q_motion)
         self.qcanvas.bind("<ButtonRelease-1>", self._q_release)
         self.qcanvas.bind("<Configure>", lambda e: self.render_queue())
+        self.qcanvas.bind("<MouseWheel>", self._q_wheel)
+        self.qcanvas.bind("<Button-4>", lambda e: self.qcanvas.yview_scroll(-1, "units"))
+        self.qcanvas.bind("<Button-5>", lambda e: self.qcanvas.yview_scroll(1, "units"))
 
         # footer (height matches action bar)
         foot = tk.Frame(inner, bg=BASE["panel"], height=t["bar_h"])
@@ -797,6 +800,9 @@ class ReviewApp:
             self.flash("Reordered")
         else:
             self.drag = None
+
+    def _q_wheel(self, e):
+        self.qcanvas.yview_scroll(-1 if e.delta > 0 else 1, "units")
 
     # ======================================================================
     # Main pane rendering.
