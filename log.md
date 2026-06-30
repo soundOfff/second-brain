@@ -364,3 +364,28 @@ Turns capture from push-only into pull: the brain now feeds itself unattended.
   tonight's `/sync`; the queue awaits `brain-feed review`. Now 9 sources, 25 in queue.
 - **Not committed.** `feeds.toml` + the 5 new `sources/` files are left uncommitted for the
   human (deposits are normally folded by the nightly `/sync` PR flow).
+
+## 2026-06-30 — fix: recap preview won't scroll on Mac (issue #2)
+
+- **Why.** GitHub issue #2: in the Brain Feed review-queue prototype
+  (`bin/gui/review-queue/index.html`), the **Recap view** clipped long content on the Mac
+  UI — tags, the "will touch X wiki pages" overlaps, and recap stats fell below the panel
+  with no way to scroll to them. Reported during a Mac UI QA pass.
+- **Root cause (WebKit-only).** The scroll container `.card-body`
+  (`flex:1;overflow-y:auto;min-height:0`) sits under `.main` — a `flex-direction:column`
+  item whose height comes from *stretching* inside the `flex-direction:row` `.body`. The
+  Mac UI renders via WebKit (Safari/WKWebView), which treats a stretch-derived cross-axis
+  height as *indefinite*, so `.card-body` grew to fit its content instead of capping, and
+  `#win{overflow:hidden}` clipped the overflow → no scroll. Blink/Gecko treat it as
+  definite, so it scrolled fine in Chrome — which is why a static CSS read and a Chrome
+  render both looked correct, masking the bug.
+- **Fix.** Added explicit `height:100%` to the two column-flex children of the row `.body`
+  — `.main` (the recap panel; the reported bug) and `.sidebar` (same latent pattern,
+  fixed for free). `.body`'s height is already definite (main-axis flex length of the
+  fixed-720px `#win`), so `height:100%` resolves and gives WebKit the definite height it
+  needs to cap `.card-body`/`.queue` and engage `overflow-y:auto`. No JS/markup changes.
+- **Verified (Chrome, no regression).** Rendered via local `python3 -m http.server`,
+  forced overflow: `#win` stays fixed at 720px, `.card-body` caps at 487px client height
+  over 1253px of content, `scrollTop` reaches the 766px max → scrolls. The change is a
+  no-op in Chrome (same value the stretch already produced). The decisive WebKit/Safari
+  test on the Mac UI is the human's to eyeball on reload.
