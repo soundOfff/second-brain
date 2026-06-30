@@ -1137,8 +1137,10 @@ class ReviewApp:
         self.toast.configure(text=msg, bg=self.t["ac"], fg=self.t["ac_on"])
         self.root.update_idletasks()
         rw, rh = self.root.winfo_width(), self.root.winfo_height()
-        tw = self.toast.winfo_reqwidth()
-        self.toast.place(x=(SIDEBAR_W + (rw - SIDEBAR_W) // 2 - tw // 2), y=rh - 150)
+        tw, th = self.toast.winfo_reqwidth(), self.toast.winfo_reqheight()
+        margin = self.t["head_padx"] - 6                   # match the pane's right inset
+        self.toast.place(x=rw - tw - margin,               # bottom-right corner
+                         y=rh - self.t["bar_h"] - th - 12)  # just above the action bar
         if self._toast_after:
             self.root.after_cancel(self._toast_after)
         self._toast_after = self.root.after(1600, self.toast.place_forget)
