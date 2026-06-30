@@ -490,7 +490,7 @@ class ReviewApp:
         nfeeds = self._feed_count()
         tk.Label(frow, text=f"feeds: {nfeeds} active", bg=BASE["panel"], fg=BASE["ink_faint"],
                  font=self.font("mono", 10)).pack(side="left")
-        self._ghost_button(frow, "Rescan", "r", self.do_rescan).pack(side="right")
+        self._action_button(frow, "Rescan", "r", "outline", self.do_rescan).pack(side="right")
 
     def _feed_count(self) -> int:
         try:
