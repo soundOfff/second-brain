@@ -51,6 +51,7 @@ import sqlite3
 import subprocess
 import sys
 import tempfile
+import time
 import tomllib
 import urllib.request
 import xml.etree.ElementTree as ET
@@ -130,6 +131,12 @@ def db_connect(path: Path) -> sqlite3.Connection:
         "CREATE TABLE IF NOT EXISTS daily "
         "(feed TEXT, day TEXT, count INTEGER, PRIMARY KEY(feed, day))"
     )
+    con.execute(
+        "CREATE TABLE IF NOT EXISTS decisions "
+        "(feed_id TEXT NOT NULL, item_id TEXT NOT NULL, "
+        " action TEXT NOT NULL, timestamp INTEGER NOT NULL, "
+        " PRIMARY KEY(item_id, timestamp))"
+    )
     con.commit()
     return con
 
@@ -158,6 +165,51 @@ def bump_day(con, feed: str, day: str) -> None:
         "ON CONFLICT(feed, day) DO UPDATE SET count = count + 1",
         (feed, day),
     )
+
+
+# --- keep/drop decision log (powers the Feed Stats keep-rate) ----------------
+
+def log_decision(con, feed_id: str, item_id: str, action: str,
+                 ts: int | None = None) -> int:
+    """Record one keep/drop decision; return the unix timestamp used (so a caller can
+    store it and undo the exact row later). INSERT OR IGNORE so a same-second re-decision
+    of the same item never crashes triage. Does NOT commit — the caller owns the txn."""
+    if ts is None:
+        ts = int(time.time())
+    con.execute(
+        "INSERT OR IGNORE INTO decisions (feed_id, item_id, action, timestamp) "
+        "VALUES (?,?,?,?)",
+        (feed_id or "", item_id, action, ts),
+    )
+    return ts
+
+
+def delete_decision(con, item_id: str, ts: int) -> None:
+    """Remove the exact decision row logged for (item_id, ts). Used by the GUI's undo so a
+    reversed keep/drop does not inflate keep-rate. Idempotent; does NOT commit."""
+    con.execute(
+        "DELETE FROM decisions WHERE item_id=? AND timestamp=?",
+        (item_id, ts),
+    )
+
+
+def compute_keep_rate(con, feed_id: str, min_decisions: int = 10) -> float | None:
+    """Fraction kept among (kept + dropped) decisions for one feed. Returns None ('N/A')
+    when fewer than `min_decisions` decisions exist. Only keep/drop are ever logged
+    (skip is not), so kept + dropped == total."""
+    row = con.execute(
+        "SELECT "
+        "  SUM(CASE WHEN action='keep' THEN 1 ELSE 0 END), "
+        "  SUM(CASE WHEN action='drop' THEN 1 ELSE 0 END) "
+        "FROM decisions WHERE feed_id=?",
+        (feed_id,),
+    ).fetchone()
+    kept = row[0] or 0
+    dropped = row[1] or 0
+    total = kept + dropped
+    if total < min_decisions:
+        return None
+    return kept / total
 
 
 # --- dedup against material already in sources/ ----------------------------
@@ -697,17 +749,29 @@ def _preview(text: str, n: int = 8) -> tuple[dict, list[str]]:
     return fm, body
 
 
+def _safe_log(con, feed_id: str, item_id: str, action: str) -> None:
+    """Log a decision without ever aborting a triage session on a db hiccup."""
+    try:
+        log_decision(con, feed_id, item_id, action)
+        con.commit()
+    except Exception as e:  # noqa: BLE001 (logging must not break triage)
+        log(f"decision log failed ({action} {item_id}): {e}")
+
+
 def review() -> int:
     REVIEW_DIR.mkdir(parents=True, exist_ok=True)
     queue = sorted(REVIEW_DIR.glob("*.md"))
     if not queue:
         print("review queue empty (.brain/review/).")
         return 0
+    con = db_connect(DB_PATH)
     print(f"{len(queue)} item(s) queued. [k]eep -> sources/  [d]rop  [s]kip  [q]uit\n")
     kept = dropped = 0
     for f in queue:
         text = f.read_text(encoding="utf-8", errors="replace")
         fm, body = _preview(text)
+        feed_id = fm.get("via", "")
+        item_id = f.stem
         print("─" * 70)
         print(f"  {fm.get('title', f.stem)}")
         if fm.get("via"):
@@ -728,19 +792,71 @@ def review() -> int:
         if choice == "k":
             dest = place(text, f.name, SOURCES, VAULT, check_review=False)
             f.unlink()
+            _safe_log(con, feed_id, item_id, "keep")
             kept += 1
             print(f"  kept -> {dest.relative_to(VAULT)}\n")
         elif choice == "d":
             f.unlink()
+            _safe_log(con, feed_id, item_id, "drop")
             dropped += 1
             print("  dropped\n")
         else:
             print("  skipped\n")
+    con.close()
     print("─" * 70)
     print(f"{kept} kept, {dropped} dropped, {len(list(REVIEW_DIR.glob('*.md')))} still queued.")
     if kept:
         print("Run /sync (or wait for the 02:00 agent) to fold the kept sources in.")
     return 0
+
+
+# ===========================================================================
+# feed stats — per-feed counts + keep-rate (read-only; powers the GUI Stats tab)
+# ===========================================================================
+
+def _queued_counts() -> dict[str, int]:
+    """Count queued files in REVIEW_DIR grouped by their `via:` feed id. Files with no
+    `via:` land under "" and so match no configured feed."""
+    counts: dict[str, int] = {}
+    if not REVIEW_DIR.is_dir():
+        return counts
+    for p in sorted(REVIEW_DIR.glob("*.md")):
+        try:
+            text = p.read_text(encoding="utf-8", errors="replace")
+        except OSError:
+            continue
+        fm, _ = _preview(text, n=0)  # frontmatter only
+        fid = fm.get("via", "")
+        counts[fid] = counts.get(fid, 0) + 1
+    return counts
+
+
+def feed_stats(con, cfg: dict, day: str | None = None) -> list[dict]:
+    """One dict per configured feed: id, adapter, trust, cap, total_seen, today_seen,
+    queued, keep_rate. Sorted by keep_rate descending with N/A (None) last, id-stable."""
+    if day is None:
+        day = today_str()
+    queued_by_feed = _queued_counts()
+    rows = []
+    for feed in cfg.get("feeds", []):
+        fid = feed.get("id")
+        if not fid:
+            continue
+        total_seen = con.execute(
+            "SELECT COUNT(*) FROM seen WHERE feed=?", (fid,)
+        ).fetchone()[0]
+        rows.append({
+            "id": fid,
+            "adapter": feed.get("adapter", "?"),
+            "trust": feed.get("trust", "queue"),
+            "cap": int(feed.get("n", cfg.get("default_cap", DEFAULT_CAP))),
+            "total_seen": total_seen,
+            "today_seen": day_count(con, fid, day),
+            "queued": queued_by_feed.get(fid, 0),
+            "keep_rate": compute_keep_rate(con, fid),
+        })
+    rows.sort(key=lambda r: (r["keep_rate"] is None, -(r["keep_rate"] or 0.0), r["id"]))
+    return rows
 
 
 # ===========================================================================
@@ -759,9 +875,11 @@ def status() -> int:
         cap = feed.get("n", cfg["default_cap"])
         seen_n = con.execute("SELECT COUNT(*) FROM seen WHERE feed=?", (fid,)).fetchone()[0]
         today_n = day_count(con, fid, day)
+        kr = compute_keep_rate(con, fid)
+        kr_s = "keep N/A" if kr is None else f"keep {kr*100:.0f}%"
         print(f"  • {fid:<22} {feed.get('adapter','?'):<6} "
               f"{feed.get('trust','queue'):<6} cap {cap:<3} "
-              f"— {seen_n} seen, {today_n} today")
+              f"— {seen_n} seen, {today_n} today, {kr_s}")
     con.close()
     q = len(list(REVIEW_DIR.glob("*.md"))) if REVIEW_DIR.is_dir() else 0
     src = len([p for p in SOURCES.glob("*.md") if p.name != "README.md"]) if SOURCES.is_dir() else 0
