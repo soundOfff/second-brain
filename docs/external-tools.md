@@ -192,7 +192,8 @@ nonexistent source IDs.
 > deposit as #1 and reusing #1's renderer; the 02:00 `/sync` folds it in. The design's
 > hard part — not poisoning the brain with a firehose — is solved by **per-feed trust**
 > (`auto` → `sources/`; `queue` → `.brain/review/`) + a **per-feed daily cap** (overflow
-> deferred unseen, drains over later days). Four adapters: `rss`/`list` are pure-stdlib;
+> deferred unseen, drains over later days). Five adapters: `rss`/`list`/`api` are pure-
+> stdlib (`api` reads any public JSON endpoint via a declarative `feeds.toml` mapping);
 > `yt` (yt-dlp captions) and `email` (IMAP, Keychain app-password) degrade gracefully —
 > absent dep/creds disables the adapter with a logged reason, never breaking the run.
 > State in `.brain/feed-state.db` (sqlite: seen GUIDs + per-feed daily counts); deposits
@@ -233,7 +234,7 @@ deliberate act **up one level**, from *per-item* to *per-subscription*:
   it contributes at most `n`/day, the rest deferred unseen and drained over following
   days. Closes the one hole in trust-only routing (a trusted feed going rogue).
 
-### Architecture — one core, four adapters
+### Architecture — one core, five adapters
 
 ```
 feeds.toml ─┐
@@ -242,8 +243,8 @@ feeds.toml ─┐
   rss ──────┤   .brain/feed-state.db (sqlite)           └─queue─► .brain/review/
   email ────┤   seen GUIDs + per-feed daily counts                     │
   list ─────┤                                              brain-feed review (k/d/s)
-  yt  ──────┘                                                    keep ──► sources/
- (rss + captions)
+  yt  ──────┤   (yt = rss + captions;                            keep ──► sources/
+  api ──────┘    api = json via a feeds.toml mapping)
 ```
 
 Each adapter yields normalized items `(title, url | body, type, feed-id, tags)`. The
@@ -268,10 +269,17 @@ YouTube channels, podcasts, Reddit, HN, GitHub releases, arXiv all expose it):
   runtime from the **macOS Keychain** (`security find-generic-password`), never on disk
   or in git. Activates only if creds are present; else the adapter is disabled and logs
   why. *Optional creds.*
+- **`api`** — read any public JSON HTTP endpoint via a declarative **mapping** in
+  `feeds.toml`: `items_path` locates the item array and dotted `url`/`title`/`guid`/`body`
+  fields name each field; `mode = "url"` (default) fetches the link like `rss`, `mode =
+  "text"` deposits an inline body like `email`. Dotted dict keys only — no wildcards/jq —
+  so it stays *pure stdlib*. The AI that authors a mapping from a sample response runs at
+  **config time only** (a Claude skill that dry-runs the mapping), never in the poll path;
+  `brain-feed.py` imports no model. Public APIs only for now — see docs/adr/0002.
 
 The heavyweight adapters (`yt`, `email`) are **optional with graceful degradation** —
-the core (`rss`, `list`) stays pure-stdlib and key-free, preserving the "runs anywhere,
-no keys" property the rest of `bin/` guards.
+the core (`rss`, `list`, `api`) stays pure-stdlib and key-free, preserving the "runs
+anywhere, no keys" property the rest of `bin/` guards.
 
 ### State, config, cadence
 
