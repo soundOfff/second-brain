@@ -157,5 +157,132 @@ class CreateFlow(unittest.TestCase):
         self.assertFalse(self.app._creating)
 
 
+class FeedSubscribe(unittest.TestCase):
+    """The form's rss/api types: instead of depositing a source, they append a
+    [[feed]] block to feeds.toml. No network, no worker thread — a config edit."""
+
+    def setUp(self):
+        try:
+            self.root = gui.tk.Tk()
+        except gui.tk.TclError as e:
+            self.skipTest(f"no Tk display: {e}")
+        self.root.withdraw()
+
+        self._tmp = tempfile.TemporaryDirectory()
+        vault = Path(self._tmp.name)
+        (vault / "sources").mkdir()
+        (vault / ".brain").mkdir()
+        self.cfg = vault / "feeds.toml"
+        self.cfg.write_text(
+            'default_cap = 5\n\n[[feed]]\nid = "existing"\nadapter = "rss"\n'
+            'url = "https://example.com/f.xml"\ntrust = "queue"\n', encoding="utf-8")
+
+        self._saved = {
+            "gui.SOURCES": gui.SOURCES, "gui.VAULT": gui.VAULT,
+            "bf.SOURCES": bf.SOURCES, "bf.VAULT": bf.VAULT,
+            "bf.DB_PATH": bf.DB_PATH, "bf.CONFIG": bf.CONFIG,
+        }
+        gui.SOURCES = bf.SOURCES = vault / "sources"
+        gui.VAULT = bf.VAULT = vault
+        bf.DB_PATH = vault / ".brain" / "feed-state.db"
+        bf.CONFIG = self.cfg
+
+        self.app = gui.ReviewApp(self.root, demo=True)
+        self.app._stats_cache = []
+        self.app.screen = "stats"
+        self.app.render_main()
+
+    def tearDown(self):
+        gui.SOURCES, gui.VAULT = self._saved["gui.SOURCES"], self._saved["gui.VAULT"]
+        bf.SOURCES, bf.VAULT = self._saved["bf.SOURCES"], self._saved["bf.VAULT"]
+        bf.DB_PATH, bf.CONFIG = self._saved["bf.DB_PATH"], self._saved["bf.CONFIG"]
+        if getattr(self.app, "_db", None) is not None:
+            self.app._db.close()
+        self.root.destroy()
+        self._tmp.cleanup()
+
+    def _feeds(self):
+        return bf.load_config(self.cfg)["feeds"]
+
+    def test_type_selector_swaps_the_fields(self):
+        self.assertTrue(self.app._ns_body.winfo_exists())      # webpage: TEXT area
+        self.app._ns_set_kind("rss")
+        self.assertTrue(self.app._ns_id.winfo_exists())        # rss: feed id + cap
+        self.assertEqual(self.app._ns_map, {})                 # …but no mapping
+        self.app._ns_set_kind("api")
+        self.assertIn("items_path", self.app._ns_map)          # api: mapping fields
+
+    def test_values_survive_a_type_switch(self):
+        self.app._ns_title.insert(0, "Kept Title")
+        self.app._ns_url.insert(0, "https://x.com/feed")
+        self.app._ns_set_kind("rss")
+        self.assertEqual(self.app._ns_title.get(), "Kept Title")
+        self.assertEqual(self.app._ns_url.get(), "https://x.com/feed")
+
+    def test_rss_subscribe_appends_feed(self):
+        self.app._ns_set_kind("rss")
+        self.app._ns_title.insert(0, "Simon Willison")
+        self.app._ns_url.insert(0, "https://simonwillison.net/atom/everything/")
+        self.app._ns_tags.insert(0, "blog, llm")
+        self.app._ns_cap.insert(0, "3")
+        self.app._submit_new_source()
+
+        feeds = self._feeds()
+        self.assertEqual(len(feeds), 2)
+        new = feeds[1]
+        self.assertEqual(new["id"], "simon-willison")          # derived from the title
+        self.assertEqual(new["adapter"], "rss")
+        self.assertEqual(new["trust"], "queue")                # the safe default
+        self.assertEqual(new["n"], 3)
+        self.assertEqual(new["tags"], ["blog", "llm"])
+        self.assertEqual(new["title"], "Simon Willison")
+
+    def test_feed_id_falls_back_to_the_url_host(self):
+        self.app._ns_set_kind("rss")
+        self.app._ns_url.insert(0, "https://www.example.com/feed.xml")
+        self.app._submit_new_source()
+        self.assertEqual(self._feeds()[1]["id"], "example-com")
+
+    def test_missing_url_is_rejected(self):
+        self.app._ns_set_kind("rss")
+        self.app._ns_title.insert(0, "No URL")
+        self.app._submit_new_source()
+        self.assertEqual(len(self._feeds()), 1)
+        self.assertIn("URL", self.app._ns_status.cget("text"))
+
+    def test_duplicate_id_is_rejected(self):
+        self.app._ns_set_kind("rss")
+        self.app._ns_id.insert(0, "existing")
+        self.app._ns_url.insert(0, "https://y.com/feed")
+        self.app._submit_new_source()
+        self.assertEqual(len(self._feeds()), 1)
+        self.assertIn("already exists", self.app._ns_status.cget("text"))
+
+    def test_api_url_mode_requires_url_field(self):
+        self.app._ns_set_kind("api")
+        self.app._ns_url.insert(0, "https://api.example/items")
+        self.app._submit_new_source()
+        self.assertEqual(len(self._feeds()), 1)
+        self.assertIn("url_field", self.app._ns_status.cget("text"))
+
+    def test_api_subscribe_writes_the_mapping(self):
+        self.app._ns_set_kind("api")
+        self.app._ns_title.insert(0, "r ML")
+        self.app._ns_url.insert(0, "https://www.reddit.com/r/ML/top.json")
+        self.app._ns_map["items_path"].insert(0, "data.children")
+        self.app._ns_map["url_field"].insert(0, "data.url")
+        self.app._ns_map["guid_field"].insert(0, "data.id")
+        self.app._ns_map["user_agent"].insert(0, "brain-feed/1.0")
+        self.app._submit_new_source()
+
+        new = self._feeds()[1]
+        self.assertEqual(new["adapter"], "api")
+        self.assertEqual(new["items_path"], "data.children")
+        self.assertEqual(new["url_field"], "data.url")
+        self.assertEqual(new["guid_field"], "data.id")
+        self.assertEqual(new["user_agent"], "brain-feed/1.0")
+        self.assertNotIn("mode", new)                          # url mode stays implicit
+
+
 if __name__ == "__main__":
     unittest.main()

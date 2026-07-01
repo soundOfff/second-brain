@@ -555,3 +555,45 @@ Turns capture from push-only into pull: the brain now feeds itself unattended.
 - **Follow-up.** The config-time *inference skill* (fetch a sample → infer the `[[feed]]`
   block → `brain-feed run --dry-run --feed <id>` → append reviewed config) is the ADR's
   other half and is not built here — a separate deliverable.
+
+## 2026-07-01 — feat: form type selector (webpage/rss/api) + Settings tab (desktop app)
+
+- **Why.** Two asks following the `api` adapter: (1) the Feed Stats **new-source form**
+  had no way to say what a URL *is* — a page to clip once, or a feed to subscribe to;
+  (2) the feeder's global daily cap (`default_cap`) was only editable by hand-editing
+  `feeds.toml`, and the app had nowhere for config at all.
+- **Form type selector.** A segmented `webpage · rss · api` control on the NEW SOURCE
+  card routes the submit: `webpage` keeps the existing one-off deposit (brain-clip render
+  → `place` → `sources/`); **`rss`/`api` subscribe instead** — the form appends a
+  `[[feed]]` block to `feeds.toml` and the daily feeder pulls it from the next run. Feed
+  kinds expose Feed id (optional — derived from title, else URL host), Daily cap
+  (optional — falls back to `default_cap`) and a `queue|auto` trust toggle (queue is the
+  default; trusting a feed stays a deliberate act). `api` adds the declarative mapping
+  fields (`items_path`, `url_field`, `title_field`, `guid_field`, `body_field`,
+  `user_agent`) plus a `url|text` mode toggle, with per-mode required-field validation
+  (`url_field` in url mode, `body_field` in text mode). The card rebuilds in place on
+  any toggle; `_ns_collect`/`_ns_vals` carry typed values across rebuilds.
+- **Settings tab.** A third top-bar screen. FEEDER: the global daily cap, prefilled from
+  config and saved via a comment-preserving in-place rewrite of the `default_cap` line
+  (never a TOML re-serialize — the hand-written comments in `feeds.toml` survive
+  byte-for-byte). APPEARANCE: accent / density / intensity as live segmented selectors —
+  the previously locked theme options — applied via `rebuild()` and persisted to the
+  gitignored `.brain/gui-prefs.json`; invalid saved values fall back to the locked
+  defaults (amber · comfortable · calm).
+- **Core (`bin/brain-feed.py`).** Config *writes* live in the core, keeping the GUI a
+  thin shell: `slugify()`, `feed_toml_block()` (canonical key order, TOML-escaped
+  strings, empties dropped), `append_feed()` (duplicate-id guard — ids namespace the
+  seen/daily dedup tables — and a parse self-check so `feeds.toml` is never left
+  unparseable), `set_default_cap()` (regex line rewrite; a missing key is inserted at the
+  *top* — after the first `[[feed]]` TOML would re-home it into that feed).
+- **Tests.** `test_feed_config.py` (15: slugify, block round-trips via tomllib, escaping,
+  append/duplicate/missing-file, cap rewrite preserving every other line byte-identical);
+  `test_new_source.py` +8 (type switch swaps fields, values survive switching, rss/api
+  subscribe flows, id derivation, duplicate/missing-URL/missing-url_field rejections);
+  `test_settings_tab.py` (6: prefill, in-place save, non-numeric rejection, live pref
+  apply + persist, next-launch load, bad-pref fallback). Also fixed a pre-existing
+  leaked sqlite connection in `test_decisions.py` (ResourceWarning noise). Full suite
+  green: 82 (was 54); `py_compile` clean; headless smoke across all three screens.
+- **Untouched.** `sources/`, the poll core, adapters, and the review flow. The config-time
+  mapping-inference skill (ADR-0002's other half) remains unbuilt — the api form fields
+  are hand-filled for now, mirroring the commented examples in `feeds.toml`.

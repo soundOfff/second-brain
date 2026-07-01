@@ -54,7 +54,7 @@ class TestDecisionsTable(_TempVault):
             ).fetchone() is not None
 
         self.assertTrue(has_table())
-        bf.db_connect(bf.DB_PATH)  # second call must not error
+        bf.db_connect(bf.DB_PATH).close()  # second call must not error
         self.assertTrue(has_table())
 
     def test_log_decision_inserts_and_returns_ts(self):

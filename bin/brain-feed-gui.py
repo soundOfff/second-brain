@@ -18,15 +18,24 @@ collision-safe naming) is reused from there, so behaviour stays single-source:
   ↑/↓             move selection                 g            toggle Recap / Outline
   click select    ·    drag to reorder (session) ·    q       quit
 
-A top tab bar toggles between the Review Queue and a **Feed Stats** screen (t): a
-read-only per-feed table (seen / today / queued / keep-rate) plus a **New source** form
-that deposits one source straight into sources/ — clip a URL or jot a note — reusing the
-same brain-clip render + place path the feeder uses, so it's contract-valid and the next
-/sync folds it in. Global one-key shortcuts yield to normal typing while a form field
-has focus.
+A top tab bar switches between the Review Queue, a **Feed Stats** screen (t), and a
+**Settings** screen. Feed Stats holds a read-only per-feed table (seen / today / queued /
+keep-rate) plus a **New source** form with a type selector:
 
-Locked theme — amber accent · comfortable density · calm intensity. No synthesis happens
-here (same as the CLI): kept items wait for the 02:00 /sync.
+  webpage   deposit one source straight into sources/ — clip a URL or jot a note —
+            reusing the same brain-clip render + place path the feeder uses, so it's
+            contract-valid and the next /sync folds it in.
+  rss/api   subscribe instead: append a [[feed]] block to feeds.toml (trust, cap, tags;
+            plus the declarative mapping fields for api) via brain_feed.append_feed —
+            the next feeder run pulls it.
+
+Settings edits the feeder's global daily cap (default_cap, written back into feeds.toml
+in place) and the appearance options (accent / density / intensity), persisted to
+.brain/gui-prefs.json (gitignored). Global one-key shortcuts yield to normal typing
+while a form field has focus.
+
+Theme defaults — amber accent · comfortable density · calm intensity. No synthesis
+happens here (same as the CLI): kept items wait for the 02:00 /sync.
 
   bin/brain-feed-gui.sh                 triage the real .brain/review/ queue
   bin/brain-feed-gui.sh --demo          showcase with 3 seeded items (no filesystem writes)
@@ -37,12 +46,14 @@ from __future__ import annotations
 
 import argparse
 import importlib.util
+import json
 import math
 import re
 import subprocess
 import sys
 import threading
 import time
+import urllib.parse
 from pathlib import Path
 
 import tkinter as tk
@@ -156,6 +167,30 @@ def inject_tags(content: str, tags: list[str]) -> str:
     fm.append("tags: [" + ", ".join(tags) + "]")
     out = "\n".join(["---", *fm, "---", *lines[end + 1:]])
     return out + "\n" if content.endswith("\n") else out
+
+
+def prefs_path() -> Path:
+    """Appearance prefs live in the gitignored .brain/ — looked up lazily so tests
+    that redirect VAULT never touch the real vault."""
+    return VAULT / ".brain" / "gui-prefs.json"
+
+
+def load_prefs() -> dict:
+    try:
+        d = json.loads(prefs_path().read_text(encoding="utf-8"))
+        return d if isinstance(d, dict) else {}
+    except (OSError, ValueError):
+        return {}
+
+
+def save_prefs(prefs: dict) -> None:
+    """Best-effort persist — appearance must never crash triage."""
+    try:
+        p = prefs_path()
+        p.parent.mkdir(parents=True, exist_ok=True)
+        p.write_text(json.dumps(prefs, indent=2) + "\n", encoding="utf-8")
+    except OSError:
+        pass
 
 
 def rel_time(epoch: float) -> str:
@@ -525,10 +560,13 @@ class ReviewApp:
     def __init__(self, root: tk.Tk, demo: bool = False) -> None:
         self.root = root
         self.demo = demo
-        # locked theme — no live selectors
-        self.accent = "amber"
-        self.density = "comfortable"
-        self.intensity = "calm"
+        # theme — defaults locked, overridable from the Settings tab (persisted)
+        prefs = load_prefs()
+        self.accent = prefs.get("accent") if prefs.get("accent") in ACCENTS else "amber"
+        self.density = (prefs.get("density")
+                        if prefs.get("density") in DENSITY else "comfortable")
+        self.intensity = (prefs.get("intensity")
+                          if prefs.get("intensity") in ("calm", "vivid") else "calm")
 
         self.items: list[Item] = []
         self.sel = 0
@@ -542,6 +580,10 @@ class ReviewApp:
         self._db = None                   # cached sqlite connection (lazy)
         self._stats_cache: list[dict] | None = None
         self._creating = False            # new-source deposit in flight (form guard)
+        self._ns_kind = "webpage"         # new-source type: webpage | rss | api
+        self._ns_trust = "queue"          # feed trust for rss/api subscriptions
+        self._ns_mode = "url"             # api mapping mode: url | text
+        self._ns_vals: dict = {}          # field values carried across form rebuilds
 
         root.title("Brain Feed — Review Queue")
         root.geometry("1120x740")
@@ -689,6 +731,7 @@ class ReviewApp:
         seg.pack(side="left", padx=t["head_padx"], pady=6)
         self._screen_tab(seg, "Review Queue", "review")
         self._screen_tab(seg, "Feed Stats  t", "stats")
+        self._screen_tab(seg, "Settings", "settings")
 
     def _screen_tab(self, parent, label, value):
         t = self.t
@@ -1112,6 +1155,8 @@ class ReviewApp:
 
         if self.screen == "stats":
             self._render_stats()      # global view; works with an empty queue
+        elif self.screen == "settings":
+            self._render_settings()
         else:
             cur = self.current()
             self._render_actions(cur)
@@ -1691,50 +1736,216 @@ class ReviewApp:
 
     # -- new-source form -------------------------------------------------------
     def _render_new_source_form(self, parent):
-        """A small form on the stats screen that deposits one source straight into
-        sources/ — the same render-via-brain-clip + place path the feeder uses, so the
-        frontmatter is contract-valid and the next /sync folds it in. Fill URL to clip a
-        page, or write text for a note (both optional; at least one is required)."""
+        """A form on the stats screen with a TYPE selector that routes what a URL *is*:
+
+        webpage → deposit one source straight into sources/ (render-via-brain-clip +
+                  place, so the frontmatter is contract-valid; next /sync folds it in).
+        rss/api → subscribe instead: append a [[feed]] block to feeds.toml via
+                  brain_feed.append_feed — the daily feeder pulls it from then on.
+
+        The card rebuilds in place when the type (or trust/mode) changes; shared field
+        values are carried across rebuilds via _ns_collect/_ns_vals."""
+        holder = tk.Frame(parent, bg=BASE["bg"])
+        holder.pack(fill="x", pady=(0, 22))
+        self._ns_holder = holder
+        self._build_ns_card()
+
+    _NS_BLURB = {
+        "webpage": "Clip a URL or jot a note straight into sources/ — the next /sync "
+                   "folds it into the wiki.",
+        "rss": "Subscribe to an RSS/Atom feed — appends a [[feed]] to feeds.toml; the "
+               "daily feeder pulls new items from the next run.",
+        "api": "Subscribe to a public JSON endpoint via a declarative mapping — appends "
+               "a [[feed]] to feeds.toml; the daily feeder pulls new items.",
+    }
+    _NS_URL_HINT = {
+        "webpage": "a web page to fetch, or a link to attach",
+        "rss": "the RSS/Atom feed URL",
+        "api": "the JSON endpoint URL (public, no auth)",
+    }
+
+    def _build_ns_card(self):
+        for w in self._ns_holder.winfo_children():
+            w.destroy()
         t = self.t
-        card = tk.Frame(parent, bg=BASE["raise"], highlightthickness=1,
+        kind = self._ns_kind
+        vals = self._ns_vals
+        self._ns_map = {}
+
+        card = tk.Frame(self._ns_holder, bg=BASE["raise"], highlightthickness=1,
                         highlightbackground=BASE["border"])
-        card.pack(fill="x", pady=(0, 22))
+        card.pack(fill="x")
         inner = tk.Frame(card, bg=BASE["raise"])
         inner.pack(fill="x", padx=18, pady=16)
 
-        tk.Label(inner, text="NEW SOURCE", bg=BASE["raise"], fg=BASE["ink_faint"],
-                 font=self.font("mono", 10, "bold")).pack(anchor="w")
-        tk.Label(inner, text="Clip a URL or jot a note straight into sources/ — the next "
-                 "/sync folds it into the wiki.", bg=BASE["raise"], fg=BASE["ink_dim2"],
+        head = tk.Frame(inner, bg=BASE["raise"])
+        head.pack(fill="x")
+        tk.Label(head, text="NEW SOURCE", bg=BASE["raise"], fg=BASE["ink_faint"],
+                 font=self.font("mono", 10, "bold")).pack(side="left")
+        self._segmented(head, [("webpage", "webpage"), ("rss", "rss"), ("api", "api")],
+                        kind, self._ns_set_kind).pack(side="right")
+        tk.Label(inner, text=self._NS_BLURB[kind], bg=BASE["raise"], fg=BASE["ink_dim2"],
                  font=self.font("ui", 12), justify="left",
                  wraplength=self._wrap() - 40).pack(anchor="w", pady=(3, 12))
 
-        self._ns_title = self._form_entry(inner, "Title", "optional — derived if left blank")
-        self._ns_url = self._form_entry(inner, "URL", "a web page to fetch, or a link to attach")
-        self._ns_tags = self._form_entry(inner, "Tags", "optional — comma-separated")
+        title_hint = ("optional — derived if left blank" if kind == "webpage"
+                      else "optional — the feed's label; also derives the id")
+        tags_hint = ("optional — comma-separated" if kind == "webpage"
+                     else "optional — stamped on every pulled item")
+        self._ns_title = self._form_entry(inner, "Title", title_hint,
+                                          vals.get("title", ""))
+        self._ns_url = self._form_entry(inner, "URL", self._NS_URL_HINT[kind],
+                                        vals.get("url", ""))
+        self._ns_tags = self._form_entry(inner, "Tags", tags_hint, vals.get("tags", ""))
 
-        tk.Label(inner, text="TEXT", bg=BASE["raise"], fg=BASE["ink_faint"],
-                 font=self.font("mono", 9, "bold")).pack(anchor="w", pady=(10, 0))
-        tk.Label(inner, text="paste text for a note; leave blank to fetch the URL above",
-                 bg=BASE["raise"], fg=BASE["ink_fainter"],
-                 font=self.font("mono", 9)).pack(anchor="w", pady=(2, 4))
-        body = tk.Text(inner, height=4, bg=BASE["sunk"], fg=BASE["ink"],
-                       insertbackground=t["ac"], relief="flat", bd=0, wrap="word",
-                       highlightthickness=1, highlightbackground=BASE["border"],
-                       highlightcolor=t["ac"], font=self.font("ui", 12), padx=10, pady=8)
-        body.pack(fill="x", pady=(0, 12))
-        self._ns_body = body
+        if kind in ("rss", "api"):
+            self._ns_id = self._form_entry(
+                inner, "Feed id",
+                "optional — derived from title/URL; must be unique in feeds.toml",
+                vals.get("fid", ""))
+            self._ns_cap = self._form_entry(
+                inner, "Daily cap",
+                f"optional — items/day for this feed (default {self._default_cap()})",
+                vals.get("cap", ""))
+            trow = tk.Frame(inner, bg=BASE["raise"])
+            trow.pack(fill="x", pady=(10, 0))
+            tk.Label(trow, text="TRUST", bg=BASE["raise"], fg=BASE["ink_faint"],
+                     font=self.font("mono", 9, "bold")).pack(side="left")
+            self._segmented(trow, [("queue", "queue"), ("auto", "auto")],
+                            self._ns_trust, self._ns_set_trust).pack(side="left",
+                                                                     padx=(10, 0))
+            tk.Label(inner, text="queue → items land in the review pen for triage; "
+                     "auto → a trusted feed flows straight into sources/",
+                     bg=BASE["raise"], fg=BASE["ink_fainter"],
+                     font=self.font("mono", 9)).pack(anchor="w", pady=(3, 0))
+
+        if kind == "api":
+            tk.Label(inner, text="MAPPING", bg=BASE["raise"], fg=BASE["ink_faint"],
+                     font=self.font("mono", 9, "bold")).pack(anchor="w", pady=(12, 0))
+            tk.Label(inner, text="dotted dict paths into the JSON — see the commented "
+                     "api examples in feeds.toml", bg=BASE["raise"],
+                     fg=BASE["ink_fainter"],
+                     font=self.font("mono", 9)).pack(anchor="w", pady=(2, 0))
+            mrow = tk.Frame(inner, bg=BASE["raise"])
+            mrow.pack(fill="x", pady=(8, 0))
+            tk.Label(mrow, text="MODE", bg=BASE["raise"], fg=BASE["ink_faint"],
+                     font=self.font("mono", 9, "bold")).pack(side="left")
+            self._segmented(mrow, [("url", "url"), ("text", "text")],
+                            self._ns_mode, self._ns_set_mode).pack(side="left",
+                                                                   padx=(10, 0))
+            tk.Label(inner, text="url → brain-clip fetches each item's link (like rss); "
+                     "text → deposit body_field as the source (like email)",
+                     bg=BASE["raise"], fg=BASE["ink_fainter"],
+                     font=self.font("mono", 9)).pack(anchor="w", pady=(3, 0))
+            map_fields = [
+                ("items_path", "path to the item array — blank = the response IS the array"),
+                ("url_field", "each item's link (provenance + dedup) — required in url mode"),
+                ("title_field", "optional — each item's title"),
+                ("guid_field", "optional — stable dedup key (falls back to url, then title)"),
+                ("body_field", "inline text to deposit — required in text mode"),
+                ("user_agent", "optional — override the default UA (some hosts 429 it)"),
+            ]
+            for key, hint in map_fields:
+                self._ns_map[key] = self._form_entry(inner, key, hint,
+                                                     vals.get(key, ""))
+
+        if kind == "webpage":
+            tk.Label(inner, text="TEXT", bg=BASE["raise"], fg=BASE["ink_faint"],
+                     font=self.font("mono", 9, "bold")).pack(anchor="w", pady=(10, 0))
+            tk.Label(inner, text="paste text for a note; leave blank to fetch the URL above",
+                     bg=BASE["raise"], fg=BASE["ink_fainter"],
+                     font=self.font("mono", 9)).pack(anchor="w", pady=(2, 4))
+            body = tk.Text(inner, height=4, bg=BASE["sunk"], fg=BASE["ink"],
+                           insertbackground=t["ac"], relief="flat", bd=0, wrap="word",
+                           highlightthickness=1, highlightbackground=BASE["border"],
+                           highlightcolor=t["ac"], font=self.font("ui", 12), padx=10, pady=8)
+            body.pack(fill="x")
+            if vals.get("body"):
+                body.insert("1.0", vals["body"])
+            self._ns_body = body
 
         srow = tk.Frame(inner, bg=BASE["raise"])
-        srow.pack(fill="x")
+        srow.pack(fill="x", pady=(12, 0))
         self._ns_status = tk.Label(srow, text="", bg=BASE["raise"], fg=BASE["ink_faint"],
                                    font=self.font("mono", 10), anchor="w", justify="left",
                                    wraplength=self._wrap() - 220)
         self._ns_status.pack(side="left", fill="x", expand=True)
-        self._ns_btn = self._simple_button(srow, "Add to sources", self._submit_new_source)
+        label = "Add to sources" if kind == "webpage" else "Add feed"
+        self._ns_btn = self._simple_button(srow, label, self._submit_new_source)
         self._ns_btn.pack(side="right")
 
-    def _form_entry(self, parent, label, hint):
+    def _segmented(self, parent, options, value, on_change):
+        """The top-bar segment idiom as a reusable form/settings control.
+        `options` is [(label, value)]; clicking a cell fires on_change(value)."""
+        t = self.t
+        seg = tk.Frame(parent, bg=BASE["raise"], highlightthickness=1,
+                       highlightbackground=BASE["border"])
+        for label, val in options:
+            on = (val == value)
+            cell = tk.Frame(seg, bg=(t["ac"] if on else BASE["raise"]))
+            cell.pack(side="left", padx=2, pady=2)
+            lab = tk.Label(cell, text=label, bg=cell["bg"],
+                           fg=(t["ac_on"] if on else BASE["ink_dim"]),
+                           font=self.font("mono", 11, "bold"), padx=12, pady=4)
+            lab.pack()
+            for w in (cell, lab):
+                w.bind("<Button-1>", lambda e, v=val: on_change(v))
+        return seg
+
+    def _ns_collect(self) -> dict:
+        """Snapshot the form's current field values so an in-place rebuild (type/trust/
+        mode change) doesn't eat what the user already typed."""
+        out = {}
+        entries = {"title": "_ns_title", "url": "_ns_url", "tags": "_ns_tags",
+                   "fid": "_ns_id", "cap": "_ns_cap"}
+        for key, attr in entries.items():
+            w = getattr(self, attr, None)
+            try:
+                if w is not None and w.winfo_exists():
+                    out[key] = w.get().strip()
+            except tk.TclError:
+                pass
+        for key, w in (getattr(self, "_ns_map", None) or {}).items():
+            try:
+                if w.winfo_exists():
+                    out[key] = w.get().strip()
+            except tk.TclError:
+                pass
+        w = getattr(self, "_ns_body", None)
+        try:
+            if w is not None and w.winfo_exists():
+                out["body"] = w.get("1.0", "end").strip()
+        except tk.TclError:
+            pass
+        return out
+
+    def _ns_rebuild(self):
+        self._ns_vals = self._ns_collect()
+        self._build_ns_card()
+        self.card.bind_wheel_to_children()   # fresh widgets need the wheel again
+
+    def _ns_set_kind(self, kind):
+        if self._ns_kind != kind:
+            self._ns_kind = kind
+            self._ns_rebuild()
+
+    def _ns_set_trust(self, trust):
+        if self._ns_trust != trust:
+            self._ns_trust = trust
+            self._ns_rebuild()
+
+    def _ns_set_mode(self, mode):
+        if self._ns_mode != mode:
+            self._ns_mode = mode
+            self._ns_rebuild()
+
+    def _default_cap(self) -> int:
+        try:
+            return int(brain_feed.load_config(brain_feed.CONFIG)["default_cap"])
+        except Exception:
+            return brain_feed.DEFAULT_CAP
+
+    def _form_entry(self, parent, label, hint, value=""):
         t = self.t
         tk.Label(parent, text=label.upper(), bg=BASE["raise"], fg=BASE["ink_faint"],
                  font=self.font("mono", 9, "bold")).pack(anchor="w", pady=(8, 3))
@@ -1743,6 +1954,8 @@ class ReviewApp:
                      highlightbackground=BASE["border"], highlightcolor=t["ac"],
                      font=self.font("ui", 12))
         e.pack(fill="x", ipady=6)
+        if value:
+            e.insert(0, value)
         if hint:
             tk.Label(parent, text=hint, bg=BASE["raise"], fg=BASE["ink_fainter"],
                      font=self.font("mono", 9)).pack(anchor="w", pady=(3, 0))
@@ -1785,6 +1998,9 @@ class ReviewApp:
     def _submit_new_source(self):
         if getattr(self, "_creating", False):
             return
+        if self._ns_kind in ("rss", "api"):
+            self._submit_new_feed(self._ns_kind)
+            return
         title = self._ns_title.get().strip()
         url = self._ns_url.get().strip()
         tags = parse_tags(self._ns_tags.get())
@@ -1803,6 +2019,56 @@ class ReviewApp:
         # back with root.after so only the main thread touches widgets.
         threading.Thread(target=self._create_source_worker, args=(item, tags),
                          daemon=True).start()
+
+    def _submit_new_feed(self, kind):
+        """rss/api submit: validate, then append a [[feed]] block to feeds.toml.
+        No network is touched — subscribing is a config edit; the feeder pulls later."""
+        title = self._ns_title.get().strip()
+        url = self._ns_url.get().strip()
+        tags = parse_tags(self._ns_tags.get())
+        fid = self._ns_id.get().strip()
+        cap_raw = self._ns_cap.get().strip()
+        if not url:
+            self._ns_set_status("Enter the feed URL.", err=True)
+            return
+        fid = fid or brain_feed.slugify(title) or brain_feed.slugify(
+            urllib.parse.urlsplit(url).netloc.removeprefix("www."))
+        if not fid:
+            self._ns_set_status("Enter a title or a feed id.", err=True)
+            return
+        n = None
+        if cap_raw:
+            try:
+                n = int(cap_raw)
+                if n < 0:
+                    raise ValueError
+            except ValueError:
+                self._ns_set_status("Daily cap must be a whole number ≥ 0.", err=True)
+                return
+        feed = {"id": fid, "adapter": kind, "url": url, "trust": self._ns_trust,
+                "n": n, "tags": tags, "title": title or None}
+        if kind == "api":
+            mapping = {k: w.get().strip() for k, w in self._ns_map.items()}
+            if self._ns_mode == "url" and not mapping.get("url_field"):
+                self._ns_set_status("url mode needs url_field — each item's link.",
+                                    err=True)
+                return
+            if self._ns_mode == "text" and not mapping.get("body_field"):
+                self._ns_set_status("text mode needs body_field — the text to deposit.",
+                                    err=True)
+                return
+            feed.update(mapping)
+            if self._ns_mode != "url":       # url is the adapter default; keep toml lean
+                feed["mode"] = self._ns_mode
+        try:
+            brain_feed.append_feed(brain_feed.CONFIG, feed)
+        except Exception as e:               # duplicate id / unwritable file / bad toml
+            self._ns_set_status(f"Failed: {e}", err=True)
+            return
+        self._ns_vals = {}                   # clear the form on success
+        self.refresh_stats()                 # the new feed shows up in the table below
+        self.rebuild()                       # sidebar "feeds: N active" count too
+        self.flash(f"Subscribed → feeds.toml · {fid}")
 
     def _create_source_worker(self, item, tags):
         try:
@@ -1825,9 +2091,112 @@ class ReviewApp:
             self._ns_set_status(f"Failed: {(err or 'unknown error')[:120]}", err=True)
             return
         self.flash(f"Created → {dest.relative_to(VAULT)}")
+        self._ns_vals = {}                         # don't resurrect the submitted values
         if self.screen == "stats":                 # refresh the pane → clears the form
             self.refresh_stats()
             self.render_main()
+
+    # -- settings screen ---------------------------------------------------------
+    def _render_settings(self):
+        """Global config in one place: the feeder's default daily cap (written back
+        into feeds.toml in place) and the appearance options (persisted to the
+        gitignored .brain/gui-prefs.json; applied live via a full rebuild)."""
+        t = self.t
+        hpad = tk.Frame(self.head, bg=BASE["bg"])
+        hpad.pack(fill="x", padx=t["head_padx"], pady=(t["head_pady"], t["head_pady"] - 6))
+        tk.Label(hpad, text="Settings", bg=BASE["bg"], fg=BASE["ink_bright"],
+                 font=self.font("ui", t["title"], "bold")).pack(anchor="w")
+        tk.Label(hpad, text="feeder config lives in feeds.toml · appearance in "
+                 ".brain/gui-prefs.json", bg=BASE["bg"], fg=BASE["ink_faint"],
+                 font=self.font("mono", 10)).pack(anchor="w", pady=(4, 0))
+
+        pad = tk.Frame(self.card.inner, bg=BASE["bg"])
+        pad.pack(fill="both", expand=True, padx=t["card_padx"], pady=t["card_pady"])
+
+        # -- feeder: the global daily cap ---------------------------------------
+        card = tk.Frame(pad, bg=BASE["raise"], highlightthickness=1,
+                        highlightbackground=BASE["border"])
+        card.pack(fill="x", pady=(0, 22))
+        inner = tk.Frame(card, bg=BASE["raise"])
+        inner.pack(fill="x", padx=18, pady=16)
+        tk.Label(inner, text="FEEDER", bg=BASE["raise"], fg=BASE["ink_faint"],
+                 font=self.font("mono", 10, "bold")).pack(anchor="w")
+        tk.Label(inner, text="The global daily cap bounds how many items each feed may "
+                 "deposit per day, so no single feed floods the brain. A feed's own n "
+                 "in feeds.toml overrides it.", bg=BASE["raise"], fg=BASE["ink_dim2"],
+                 font=self.font("ui", 12), justify="left",
+                 wraplength=self._wrap() - 40).pack(anchor="w", pady=(3, 4))
+        self._set_cap_entry = self._form_entry(
+            inner, "Global daily cap", "whole number ≥ 0 — saved to feeds.toml "
+            "(default_cap)", str(self._default_cap()))
+        srow = tk.Frame(inner, bg=BASE["raise"])
+        srow.pack(fill="x", pady=(12, 0))
+        self._set_status = tk.Label(srow, text="", bg=BASE["raise"],
+                                    fg=BASE["ink_faint"], font=self.font("mono", 10),
+                                    anchor="w", justify="left",
+                                    wraplength=self._wrap() - 220)
+        self._set_status.pack(side="left", fill="x", expand=True)
+        self._simple_button(srow, "Save cap", self._save_default_cap).pack(side="right")
+
+        # -- appearance -----------------------------------------------------------
+        card2 = tk.Frame(pad, bg=BASE["raise"], highlightthickness=1,
+                         highlightbackground=BASE["border"])
+        card2.pack(fill="x")
+        inner2 = tk.Frame(card2, bg=BASE["raise"])
+        inner2.pack(fill="x", padx=18, pady=16)
+        tk.Label(inner2, text="APPEARANCE", bg=BASE["raise"], fg=BASE["ink_faint"],
+                 font=self.font("mono", 10, "bold")).pack(anchor="w")
+        tk.Label(inner2, text="applies immediately · saved for the next launch",
+                 bg=BASE["raise"], fg=BASE["ink_fainter"],
+                 font=self.font("mono", 9)).pack(anchor="w", pady=(2, 6))
+        rows = [
+            ("ACCENT", "accent", [(k, k) for k in ACCENTS], self.accent),
+            ("DENSITY", "density", [(k, k) for k in DENSITY], self.density),
+            ("INTENSITY", "intensity", [("calm", "calm"), ("vivid", "vivid")],
+             self.intensity),
+        ]
+        for label, key, options, current in rows:
+            row = tk.Frame(inner2, bg=BASE["raise"])
+            row.pack(fill="x", pady=(8, 0))
+            tk.Label(row, text=label, bg=BASE["raise"], fg=BASE["ink_faint"],
+                     font=self.font("mono", 9, "bold"), width=10,
+                     anchor="w").pack(side="left")
+            self._segmented(row, options, current,
+                            lambda v, k=key: self._set_pref(k, v)).pack(side="left")
+
+    def _settings_set_status(self, msg, err=False):
+        try:
+            self._set_status.configure(
+                text=msg, fg=(BASE["drop_ink"] if err else BASE["ink_faint"]))
+        except (AttributeError, tk.TclError):
+            pass                                  # pane was torn down; nothing to update
+
+    def _save_default_cap(self):
+        raw = self._set_cap_entry.get().strip()
+        try:
+            cap = int(raw)
+            if cap < 0:
+                raise ValueError
+        except ValueError:
+            self._settings_set_status("Cap must be a whole number ≥ 0.", err=True)
+            return
+        try:
+            brain_feed.set_default_cap(brain_feed.CONFIG, cap)
+        except Exception as e:                    # unwritable / unparseable feeds.toml
+            self._settings_set_status(f"Failed: {e}", err=True)
+            return
+        self._stats_cache = None                  # the stats CAP column derives from it
+        self._settings_set_status(f"Saved — feeds without their own n now cap at "
+                                  f"{cap}/day.")
+        self.flash(f"default_cap = {cap} → feeds.toml")
+
+    def _set_pref(self, key, value):
+        if getattr(self, key) == value:
+            return
+        setattr(self, key, value)
+        save_prefs({"accent": self.accent, "density": self.density,
+                    "intensity": self.intensity})
+        self.rebuild()                            # re-theme in place; stays on Settings
 
     # -- toast -----------------------------------------------------------------
     def flash(self, msg: str):

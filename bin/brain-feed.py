@@ -119,6 +119,77 @@ def load_config(path: Path) -> dict:
     return {"default_cap": int(data.get("default_cap", DEFAULT_CAP)), "feeds": feeds}
 
 
+# --- config writes (used by the desktop app; feeds.toml stays hand-editable) -
+
+def slugify(text: str) -> str:
+    """A kebab-case feed id / slug from free text ('' if nothing survives)."""
+    s = re.sub(r"[^a-z0-9]+", "-", text.lower())
+    return re.sub(r"-{2,}", "-", s).strip("-")
+
+
+def _toml_str(s: str) -> str:
+    return '"' + str(s).replace("\\", "\\\\").replace('"', '\\"') + '"'
+
+
+# Canonical key order for a written [[feed]] block — mapping keys sit together the
+# way the commented examples in feeds.toml do.
+_FEED_KEYS = ("id", "adapter", "url", "path", "items_path", "url_field",
+              "title_field", "guid_field", "body_field", "mode", "user_agent",
+              "user", "mailbox", "keychain_service", "trust", "n", "tags", "title")
+
+
+def feed_toml_block(feed: dict) -> str:
+    """Serialize one feed dict into a [[feed]] TOML block. Empty/None values are
+    dropped; `n` writes as an int, `tags` as an array, everything else a string."""
+    lines = ["[[feed]]"]
+    for key in _FEED_KEYS:
+        v = feed.get(key)
+        if v is None or v == "" or v == []:
+            continue
+        if key == "n":
+            lines.append(f"n = {int(v)}")
+        elif key == "tags":
+            lines.append("tags = [" + ", ".join(_toml_str(t) for t in v) + "]")
+        else:
+            lines.append(f"{key} = {_toml_str(v)}")
+    return "\n".join(lines) + "\n"
+
+
+def append_feed(path: Path, feed: dict) -> None:
+    """Append one [[feed]] block to feeds.toml (comments and existing blocks are
+    untouched). Refuses a duplicate id — ids namespace the seen/daily state tables,
+    so reusing one would cross dedup streams. Raises ValueError on a bad feed."""
+    fid = (feed.get("id") or "").strip()
+    if not fid:
+        raise ValueError("feed needs an id")
+    if not feed.get("adapter"):
+        raise ValueError("feed needs an adapter")
+    if fid in {f.get("id") for f in load_config(path)["feeds"]}:
+        raise ValueError(f"feed id '{fid}' already exists in {path.name}")
+    text = path.read_text(encoding="utf-8") if path.is_file() else ""
+    if text and not text.endswith("\n"):
+        text += "\n"
+    new = text + ("\n" if text else "") + feed_toml_block(feed)
+    tomllib.loads(new)  # self-check: never leave feeds.toml unparseable
+    path.write_text(new, encoding="utf-8")
+
+
+def set_default_cap(path: Path, cap: int) -> None:
+    """Rewrite the global `default_cap` line of feeds.toml in place, preserving the
+    rest of the file byte-for-byte. A missing line is inserted at the TOP — a bare
+    key after the first [[feed]] table would be re-homed into that feed by TOML."""
+    cap = int(cap)
+    if cap < 0:
+        raise ValueError("default_cap must be >= 0")
+    text = path.read_text(encoding="utf-8") if path.is_file() else ""
+    new, nsubs = re.subn(r"(?m)^default_cap\s*=.*$", f"default_cap = {cap}",
+                         text, count=1)
+    if nsubs == 0:
+        new = f"default_cap = {cap}\n" + text
+    tomllib.loads(new)
+    path.write_text(new, encoding="utf-8")
+
+
 # --- sqlite state ----------------------------------------------------------
 
 def db_connect(path: Path) -> sqlite3.Connection:

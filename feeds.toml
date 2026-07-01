@@ -11,7 +11,7 @@
 #
 # A per-feed daily cap bounds throughput so no single feed can flood the brain; overflow
 # is deferred (left unseen) and drains over following days. Set globally or per feed.
-default_cap = 5
+default_cap = 3
 
 # Every feed needs: id (unique), adapter (rss|list|yt|email), trust (auto|queue).
 # Optional: n (this feed's daily cap), tags (added to each deposited source's frontmatter),
