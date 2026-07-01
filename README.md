@@ -44,7 +44,9 @@ The brain maintains itself unattended via launchd — drop sources in, read the 
 later. `bin/brain-schedule.sh install` loads two LaunchAgents that run `claude`
 headlessly in this vault:
 
-- **nightly 02:00** → `/sync` reconciles any new sources,
+- **nightly 02:00** → a deterministic `tidy --fix` pass, then `/sync` to reconcile new
+  sources — but Claude is invoked only when there's a backlog, so an empty night spends no
+  tokens (`docs/adr/0001`),
 - **Mondays 09:00** → `/digest` writes the weekly synthesis.
 
 Unattended runs **never write to `main`**. Each one validates its output, then opens a
@@ -74,11 +76,17 @@ Deterministic helpers — no LLM, no tokens — that surround the agent:
   folder, the `list` feed, a share-sheet) can capture a video by link. Without `yt-dlp`
   installed it warns and falls back to page extraction.
 - **Subscribe to feeds (pull)** — `bin/brain-feed.sh run` polls the feeds in `feeds.toml`
-  (RSS/Atom, a to-read list, YouTube, an email label) and deposits new items into
-  `sources/` (trusted feeds) or `.brain/review/` (queued — triage with `brain-feed
-  review`). A per-feed daily cap stops any feed flooding the brain. Reuses the clipper's
-  deposit, so the nightly `/sync` folds the result in. Opt-in daily 01:30 schedule via
-  `bin/brain-feed-schedule.sh install`.
+  through five adapters — RSS/Atom, a to-read list, YouTube, an email label, and **`api`**
+  (any public JSON HTTP endpoint, mapped to items by a declarative block in `feeds.toml`:
+  `items_path` plus which field is the `url`/`title`/`guid`/`body`, so a new API is a
+  config edit, not new Python) — and deposits new items into `sources/` (trusted feeds) or
+  `.brain/review/` (queued — triage with `brain-feed review`). A per-feed daily cap stops
+  any feed flooding the brain. Reuses the clipper's deposit, so the nightly `/sync` folds
+  the result in. Opt-in daily 01:30 schedule via `bin/brain-feed-schedule.sh install`.
+  The poll loop stays deterministic and model-free by design: for an `api` feed *you*
+  author the mapping once in a Claude session from a sample response and validate it with
+  `bin/brain-feed.sh run --dry-run --feed <id>` — the unattended feeder never calls a model
+  (`docs/adr/0002`).
 - **Read the wiki in a browser** — `bin/brain-serve.sh [port]` renders `wiki/` and
   `index.md` read-only, resolving wikilinks, citations, and backlinks, and surfacing
   stubs and dangling links.
