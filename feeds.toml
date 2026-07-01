@@ -133,3 +133,46 @@ title = "Lobsters — AI tag"
 # keychain_service = "brain-feed-imap"
 # trust = "queue"
 # n = 10
+
+# --- api: any public JSON HTTP endpoint via a declarative MAPPING (see docs/adr/0002) ---
+# One adapter reads many APIs because the shape lives HERE, not in Python. A MAPPING is:
+#   items_path   dotted path to the JSON array of items ("" = the response IS the array)
+#   url_field    dotted path to each item's link  (read in BOTH modes: provenance + dedup)
+#   title_field  dotted path to each item's title
+#   guid_field   dotted path to a stable dedup key (falls back to url, then title)
+#   body_field   dotted path to inline text        (mode = "text" only)
+#   mode         "url" (default) brain-clip fetches the link, like rss
+#                "text"          deposit body_field as the source, like email
+# Paths are dotted DICT keys only — no wildcards/filters/jq. An API too irregular for that
+# is the signal to write a named bespoke adapter, not to grow a query language here.
+# Public (no-auth) APIs only for now. Optional `user_agent` overrides the default UA
+# (some hosts — e.g. Reddit — 429 the default). Don't hand-write a mapping: the config-time
+# skill fetches a sample, infers the block, and dry-runs it before you commit.
+#
+# url mode — Reddit's JSON (nested envelope; needs a custom UA):
+# [[feed]]
+# id = "r-machinelearning"
+# adapter = "api"
+# url = "https://www.reddit.com/r/MachineLearning/top.json?t=day&limit=25"
+# items_path = "data.children"
+# url_field = "data.url"
+# title_field = "data.title"
+# guid_field = "data.id"
+# user_agent = "brain-feed/1.0 (personal second brain)"
+# trust = "queue"
+# n = 5
+# tags = ["news", "ml"]
+#
+# text mode — deposit an inline body instead of fetching the link:
+# [[feed]]
+# id = "changelog-api"
+# adapter = "api"
+# url = "https://example.com/api/v1/changes"
+# items_path = "results"
+# guid_field = "id"
+# title_field = "title"
+# url_field = "permalink"
+# body_field = "body_markdown"
+# mode = "text"
+# trust = "queue"
+# n = 10
