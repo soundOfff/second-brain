@@ -224,6 +224,7 @@ class E2E(unittest.TestCase):
     @classmethod
     def tearDownClass(cls):
         cls.srv.shutdown()
+        cls.srv.server_close()                 # release the listening socket (no ResourceWarning)
         bf.BRAIN, bf.LOG = cls._saved["BRAIN"], cls._saved["LOG"]
         cls._tmp.cleanup()
 
