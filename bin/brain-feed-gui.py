@@ -513,10 +513,24 @@ class ScrollFrame(tk.Frame):
         self.canvas.pack(side="left", fill="both", expand=True)
         self.inner = tk.Frame(self.canvas, bg=bg)
         self._win = self.canvas.create_window((0, 0), window=self.inner, anchor="nw")
-        self.inner.bind("<Configure>", lambda e: self.canvas.configure(scrollregion=self.canvas.bbox("all")))
-        self.canvas.bind("<Configure>", lambda e: self.canvas.itemconfigure(self._win, width=e.width))
+        self.inner.bind("<Configure>", self._on_inner_resize)
+        self.canvas.bind("<Configure>", self._on_canvas_resize)
         self.bind_wheel(self.canvas)
         self.bind_wheel(self.inner)
+
+    def _fits(self) -> bool:
+        """True when the content is no taller than the viewport (nothing to scroll)."""
+        return self.inner.winfo_height() <= self.canvas.winfo_height()
+
+    def _on_inner_resize(self, e):
+        self.canvas.configure(scrollregion=self.canvas.bbox("all"))
+        if self._fits():
+            self.canvas.yview_moveto(0)
+
+    def _on_canvas_resize(self, e):
+        self.canvas.itemconfigure(self._win, width=e.width)
+        if self._fits():
+            self.canvas.yview_moveto(0)
 
     def bind_wheel(self, w):
         """Bind the wheel handler onto one widget. Tk delivers a wheel event to the
@@ -540,6 +554,12 @@ class ScrollFrame(tk.Frame):
             walk(c)
 
     def _wheel(self, e):
+        # When the content already fits, Tk does not clamp wheel-up at the top: the
+        # origin drifts down to (content - viewport) < 0, opening a dead gap above
+        # the content that the user can "scroll" into. Snap back and refuse instead.
+        if self._fits():
+            self.canvas.yview_moveto(0)
+            return
         # Button-4/5 (X11/older trackpads) carry no `delta`; map them by button number.
         num = getattr(e, "num", 0)
         if num == 4:
@@ -804,8 +824,8 @@ class ReviewApp:
         self.qcanvas.bind("<ButtonRelease-1>", self._q_release)
         self.qcanvas.bind("<Configure>", lambda e: self.render_queue())
         self.qcanvas.bind("<MouseWheel>", self._q_wheel)
-        self.qcanvas.bind("<Button-4>", lambda e: self.qcanvas.yview_scroll(-1, "units"))
-        self.qcanvas.bind("<Button-5>", lambda e: self.qcanvas.yview_scroll(1, "units"))
+        self.qcanvas.bind("<Button-4>", self._q_wheel)
+        self.qcanvas.bind("<Button-5>", self._q_wheel)
 
         # footer (height matches action bar)
         foot = tk.Frame(inner, bg=BASE["panel"], height=t["bar_h"])
@@ -1155,7 +1175,19 @@ class ReviewApp:
             self.drag = None
 
     def _q_wheel(self, e):
-        self.qcanvas.yview_scroll(-1 if e.delta > 0 else 1, "units")
+        # Same no-clamp quirk as ScrollFrame._wheel: with all rows visible, wheel-up
+        # would drift the origin negative and open dead space above the queue.
+        if len(self.items) * self.t["row_h"] <= self.qcanvas.winfo_height():
+            self.qcanvas.yview_moveto(0)
+            return
+        num = getattr(e, "num", 0)
+        if num == 4:
+            step = -1
+        elif num == 5:
+            step = 1
+        else:
+            step = -1 if e.delta > 0 else 1
+        self.qcanvas.yview_scroll(step, "units")
 
     # ======================================================================
     # Main pane rendering.
