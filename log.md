@@ -448,3 +448,110 @@ Turns capture from push-only into pull: the brain now feeds itself unattended.
   guards hold, closes cleanly. `.brain/feed-state.db` stays gitignored.
 - **Untouched.** No browser UI built; `feeds.toml`, `sources/`, the Tkinter triage flow and
   the existing review-queue mockup are unchanged.
+
+## 2026-07-01 — feat: New-source form on Feed Stats + recap scroll fix (desktop app)
+
+- **Why.** Two asks against the native Tkinter app (`bin/brain-feed-gui.py`): (1) add a
+  form to the **Feed Stats** screen for creating a source by hand, and (2) the recap
+  preview still wouldn't scroll when its content overflowed. (Issue #2's earlier fix was
+  CSS on the *HTML prototype*; the native app has its own `ScrollFrame`.)
+- **Recap scroll — root cause.** `ScrollFrame` bound the wheel only on its `canvas` +
+  `inner`. Tk delivers a wheel event to the widget *under the cursor*, and the recap fills
+  the pane with child labels/frames — so scrolling was dead everywhere the content
+  actually is. **Fix:** `bind_wheel_to_children()` walks the freshly-rendered subtree
+  after every `render_main()` and binds the handler on each descendant (skipping `tk.Text`
+  so a text area keeps its own scroll), plus `<Button-4/5>` for X11-style wheels and a
+  `yview_moveto(0)` reset so each new item/screen starts at the top. Verified: recap went
+  0 → 29/29 child widgets wheel-bound; stats 34/35 (the 1 excluded is the note `Text`).
+- **New source form.** On the Feed Stats screen, above the per-feed table: Title / URL /
+  Tags / a multi-line Text, and an **Add to sources** button. Fill URL to clip a page,
+  or write text for a note (≥1 required). Reuses `brain_feed.render_via_clip` +
+  `place` — the exact deposit path the feeder uses — so frontmatter is contract-valid and
+  the next `/sync` folds it in; a new `inject_tags()` adds `tags:` *without* stamping a
+  feed `via:` (a hand-made source is not a feed pull). The clip render (may fetch the
+  network) runs on a worker thread; results marshal back via `root.after` so only the main
+  thread touches widgets. `_creating` guards against double-submit.
+- **Typing guard.** Global one-key shortcuts (`t`, `q`, `g`, arrows, …) were `bind_all`,
+  so typing in the new form fired them mid-word. `_bind_keys` now routes every shortcut
+  through a guard that no-ops when focus is in a `tk.Entry`/`tk.Text`.
+- **Tests.** `bin/tests/test_new_source.py` — `inject_tags` (4 cases) + a headless create
+  flow (construct the app, stub the clip render + threading, deposit into a temp vault,
+  assert note/url/tags/validation/failure paths). 8 new cases; full suite 28 green:
+  `python3 -m unittest discover -s bin/tests -t bin`.
+- **Verified.** `py_compile` clean; suite green; wheel bindings asserted headless; the
+  interactive trackpad-scroll + real create on the Mac app is the human's to eyeball
+  (`bin/brain-feed-gui.sh`, or `--demo` for the form with no queue).
+
+## 2026-07-01 — fix: render the Recap tab as real markdown, not a wall of syntax (desktop app)
+
+- **Why.** The right-hand "Recap preview" pane in `bin/brain-feed-gui.py` dumped its
+  content into one flat `tk.Label`, so every `##`, `###`, `>`, `*` showed as a literal
+  character in an undifferentiated block. Worse, the pane was *mislabelled*: it renders the
+  raw source body (first ~400 lines via `brain_feed._preview`, frontmatter stripped) — a
+  **Backlog** item by the glossary (source exists, `wiki/recaps/<id>.md` does not) — under
+  a header that claimed "Recap". A recap is a specific synthesised artifact; first-person
+  source prose is not one.
+- **Two-state Recap tab.** The tab now branches on a Tidy-level file check
+  (`RECAPS/<id>.md` exists?): **recap present** → render the synthesised recap whole, header
+  "Recap"; **Backlog** → render a *source preview*, masthead skipped, capped at 10 blocks
+  with a dim `…  N more · open source` affordance, header "Source · no recap yet". Kills the
+  mislabel; review-queue items (never yet in `sources/`) are always Backlog, so the recap
+  branch lights up only after a kept source is synced.
+- **Markdown → stacked block frames.** New pure helpers `parse_blocks` /
+  `clean_inline` / `strip_masthead` / `strip_frontmatter` classify lines into
+  `h2/h3/p/quote/li` and flatten inline markup; `_render_blocks` stacks them as frames
+  (the idiom the card already uses) — headings bold/larger, blockquotes with an accent
+  left-rule + italic, bullets, accent-coloured entity/concept link lists. `join_wrapped`
+  reflows hard-wrapped recap prose (≈90-col) while leaving `_preview` output (already one
+  line per paragraph) unmerged. Wikilinks `[[path/slug]]` clean to a titled label with an
+  acronym set (`llm-wiki` → **LLM Wiki**); citations `[src-id]` kept **verbatim** so
+  provenance stays on screen. New `open_source()` reveals the full raw file.
+- **Known limits (design choice, not a bug).** A `tk.Label` holds one font/colour, so
+  block-frames can't style mid-paragraph: inline `*`/`**` emphasis is stripped, buried
+  wikilinks are cleaned but not coloured (only whole-block link lists get accent), and
+  citations render in normal ink rather than dimmed inline. True inline styling would need
+  `tk.Text`, which we chose against to keep the frame-based card idiom.
+- **Verified.** `py_compile` clean; parse tests confirm merged intro paragraph, joined
+  wrapped bullets, preserved acronyms, verbatim citations, accent-flagged entity/concept
+  lists; a headless Tk build of the real Karpathy recap produced 18 widgets with no crash;
+  `--demo` boots clean. Interactive eyeballing on the Mac app is the human's.
+- **Untouched.** No glossary term added to `CONTEXT.md` (leaned on `Recap`/`Backlog`/`Tidy`
+  as already defined); no ADR (reversible render code, no hard trade-off). `sources/`,
+  `feeds.toml`, the review/stats flows unchanged.
+
+## 2026-07-01 — feat: generic `api` adapter (JSON endpoints via a declarative mapping)
+
+- **Why.** The feeder could only read RSS/Atom, a markdown list, YouTube, or IMAP. Plenty
+  of good sources expose only JSON HTTP APIs (Reddit, changelogs, GitHub, …). Rather than a
+  bespoke adapter per API, a fifth adapter `api` reads *any* public JSON endpoint via a
+  **declarative mapping** in `feeds.toml` — adding a source stays a config edit, like `rss`.
+- **Design (docs/adr/0002 + CONTEXT.md).** Generality comes from static config, not runtime
+  code. The mapping is `items_path` (dotted path to the item array; `""` = the response IS
+  the array) + dotted `url_field`/`title_field`/`guid_field`/`body_field`, plus `mode`
+  (`url` default → brain-clip fetches the link like `rss`; `text` → deposit `body_field`
+  like `email`). Path language is deliberately minimal — dotted dict keys only, no
+  wildcards/jq — which keeps the adapter **pure-stdlib** (never self-disables for a missing
+  dep). The AI that *authors* a mapping from a sample is a **config-time** Claude skill; the
+  poll path imports no model, so `api` runs in the 01:30 cron with no key — the
+  [[Outside of Claude]] wall stays hard.
+- **Code (`bin/brain-feed.py`).** `resolve_path()` (dotted resolver, None on any missing
+  key / non-dict step / list — no indexing) + `_scalar()` (trim to string or None;
+  containers → None) + `adapter_api()`. `guid` falls back guid→url→title (same chain as
+  `parse_feed_xml`); items with no stable guid, or no url in `url` mode, are skipped;
+  `url_field` is read in *both* modes for provenance/dedup. `fetch_url()` gained an optional
+  `user_agent` override (Reddit et al. 429 the default UA). Registered in `ADAPTERS`; the
+  deterministic core (dedup → cap → trust-route → deposit) is untouched.
+- **Scope (v1).** Public APIs only — no auth built (the mapping reserves room for a later
+  `auth` field over the Keychain, deferred). GET/JSON/single-response, no pagination; daily
+  poll + guid dedup + per-feed cap give continuous coverage without walking pages.
+- **Tests.** `bin/tests/test_api_adapter.py` — 26 cases: resolver + scalar units, normalize
+  over stubbed JSON (guid fallback, missing→None, both modes, non-list items_path, UA
+  passthrough), and a local-HTTP-server e2e across three shapes (nested envelope, flat
+  array, top-level array) both modes. Full suite green: 54 (was 28). `py_compile` clean.
+- **Docs/config.** `feeds.toml` gains a commented `api` block (Reddit url-mode + a text-mode
+  example); `docs/external-tools.md §4` bumped four→five adapters (summary, diagram,
+  bullet, pure-stdlib core line). CONTEXT.md `Adapter`/`Mapping` glossary entries already
+  landed with the ADR.
+- **Follow-up.** The config-time *inference skill* (fetch a sample → infer the `[[feed]]`
+  block → `brain-feed run --dry-run --feed <id>` → append reviewed config) is the ADR's
+  other half and is not built here — a separate deliverable.

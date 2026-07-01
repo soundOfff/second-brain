@@ -41,3 +41,20 @@ cannot reuse the CLI subscription. So only two things are "outside of Claude": f
 deterministic code (true, for [[Tidy]]), or a subprocess wrapper around the already-
 authenticated `claude -p` CLI (partial, for [[Sync]] — still depends on the binary + sub).
 _Avoid_: headless, standalone, SDK (ambiguous — the Agent SDK specifically does not fit).
+
+**Adapter**:
+A thin, per-source-kind reader in the pull feeder (`bin/brain-feed.py`) that turns one
+subscribed feed into a list of *normalized items* `{guid, url, title, body, type,
+source_kind}`. The feeder is one deterministic core (dedup → cap → trust-route → deposit)
+plus a set of adapters; adapters do I/O and shape-mapping only, never synthesis. Existing:
+`rss`, `list`, `yt`, `email`. An adapter is [[Outside of Claude]] — it must run in the
+01:30 cron with no model and no API key.
+_Avoid_: plugin, connector, integration, driver.
+
+**Mapping** (API adapter):
+The declarative block in `feeds.toml` that tells the generic `api` adapter how to read one
+JSON API's response into normalized items — path to the item array plus which field is the
+`guid`/`url`/`title`/`body`. It is *static config a human owns*: the daily poll reads it
+with no model. AI may only *author* a mapping at config time (from a sample response),
+never *apply* one at poll time — that would violate [[Outside of Claude]].
+_Avoid_: schema, template, transform, extractor (extractor implies runtime AI).

@@ -18,6 +18,13 @@ collision-safe naming) is reused from there, so behaviour stays single-source:
   ↑/↓             move selection                 g            toggle Recap / Outline
   click select    ·    drag to reorder (session) ·    q       quit
 
+A top tab bar toggles between the Review Queue and a **Feed Stats** screen (t): a
+read-only per-feed table (seen / today / queued / keep-rate) plus a **New source** form
+that deposits one source straight into sources/ — clip a URL or jot a note — reusing the
+same brain-clip render + place path the feeder uses, so it's contract-valid and the next
+/sync folds it in. Global one-key shortcuts yield to normal typing while a form field
+has focus.
+
 Locked theme — amber accent · comfortable density · calm intensity. No synthesis happens
 here (same as the CLI): kept items wait for the 02:00 /sync.
 
@@ -30,8 +37,11 @@ from __future__ import annotations
 
 import argparse
 import importlib.util
+import math
+import re
 import subprocess
 import sys
+import threading
 import time
 from pathlib import Path
 
@@ -47,6 +57,7 @@ _spec.loader.exec_module(brain_feed)
 VAULT = brain_feed.VAULT
 SOURCES = brain_feed.SOURCES
 REVIEW_DIR = brain_feed.REVIEW_DIR
+RECAPS = VAULT / "wiki" / "recaps"       # a source has a recap iff RECAPS/<id>.md exists
 
 
 # ============================================================================
@@ -126,6 +137,27 @@ def parse_tags(raw: str) -> list[str]:
     return out
 
 
+def inject_tags(content: str, tags: list[str]) -> str:
+    """Add a `tags: [...]` line to a source's frontmatter if absent, returning the
+    content unchanged when there's nothing to do. Mirrors brain_feed.inject_provenance
+    but *without* stamping a feed `via:` — a source hand-made in this window is a plain
+    source, not a feed pull, so it carries no feed provenance."""
+    if not tags:
+        return content
+    lines = content.splitlines()
+    if not lines or lines[0].strip() != "---":
+        return content
+    end = next((i for i in range(1, len(lines)) if lines[i].strip() == "---"), None)
+    if end is None:
+        return content
+    fm = lines[1:end]
+    if any(re.match(r"^tags:\s", l) for l in fm):
+        return content
+    fm.append("tags: [" + ", ".join(tags) + "]")
+    out = "\n".join(["---", *fm, "---", *lines[end + 1:]])
+    return out + "\n" if content.endswith("\n") else out
+
+
 def rel_time(epoch: float) -> str:
     secs = max(0, time.time() - epoch)
     if secs < 90:
@@ -137,6 +169,109 @@ def rel_time(epoch: float) -> str:
     if hrs < 36:
         return f"{round(hrs)}h ago"
     return f"{round(hrs / 24)}d ago"
+
+
+# ============================================================================
+# Markdown → display blocks.
+#
+# Tk has no markdown widget and a Label holds exactly one font/colour, so we
+# render *block* structure (headings, quotes, lists, paragraphs) as stacked
+# frames and flatten *inline* markup to plain text:
+#   - *italic* / **bold** markers are stripped (no per-word styling in a Label);
+#   - in recaps, wikilinks [[path/slug]] are cleaned to a readable title, and a
+#     block that is *only* wikilinks is accent-coloured wholesale (entity/concept
+#     lists) — inline links buried in prose are cleaned but not coloured;
+#   - citations [src-id] are kept verbatim so provenance stays on screen.
+# ============================================================================
+_WIKILINK_RE = re.compile(r"\[\[([^\]]+)\]\]")
+_BOLD_RE = re.compile(r"\*\*(.+?)\*\*")
+_ITALIC_RE = re.compile(r"(?<!\*)\*(?!\s)([^*]+?)\*(?!\*)")
+_LINKS_ONLY_RE = re.compile(r"^(?:\[\[[^\]]+\]\][\s,;·]*)+$")
+_BULLET_RE = re.compile(r"^\s*[-*]\s+")
+
+
+_ACRONYMS = {"llm", "llms", "rag", "ai", "api", "ui", "ux", "gui", "cli", "pdf",
+             "url", "sdk", "adr"}
+
+
+def _link_title(inner: str) -> str:
+    """[[path/to/slug]] or [[slug|Alias]] → a human label. Aliases pass through
+    verbatim; slugs are title-cased with known acronyms re-uppercased."""
+    if "|" in inner:
+        return inner.split("|", 1)[1].strip()
+    seg = inner.rstrip("/").split("/")[-1].strip()
+    if not seg:
+        return inner
+    words = seg.replace("-", " ").replace("_", " ").split()
+    return " ".join(w.upper() if w.lower() in _ACRONYMS else w.title() for w in words)
+
+
+def clean_inline(s: str, *, recap: bool) -> str:
+    """Flatten inline markup to plain text. Citations [src-id] are left verbatim."""
+    if recap:
+        s = _WIKILINK_RE.sub(lambda m: _link_title(m.group(1)), s)
+    s = _BOLD_RE.sub(r"\1", s)
+    s = _ITALIC_RE.sub(r"\1", s)
+    return s.strip()
+
+
+def parse_blocks(lines: list[str], *, recap: bool, join_wrapped: bool = False) -> list[dict]:
+    """Classify each non-blank line into a display block. Returns
+    [{kind, text, accent?}] with kind in h2 | h3 | p | quote | li.
+
+    `join_wrapped` reflows hard-wrapped prose: a plain line that continues the
+    previous paragraph/list-item (no blank line between) is appended to it, and a
+    blank line separates paragraphs. Use it for raw files that wrap at ~90 cols
+    (recaps); leave it off for `_preview` output, where blanks are already gone
+    and every line is its own paragraph."""
+    blocks: list[dict] = []
+    prev_blank = True
+    for raw in lines:
+        line = raw.rstrip()
+        if not line.strip():
+            prev_blank = True
+            continue
+        accent = recap and bool(_LINKS_ONLY_RE.match(line.strip()))
+        if line.startswith("### ") or line.startswith("#### "):
+            blocks.append({"kind": "h3", "text": clean_inline(line.lstrip("#").strip(), recap=recap)})
+        elif line.startswith("## "):
+            blocks.append({"kind": "h2", "text": clean_inline(line[3:].strip(), recap=recap)})
+        elif line.startswith("# "):
+            blocks.append({"kind": "h2", "text": clean_inline(line[2:].strip(), recap=recap)})
+        elif line.lstrip().startswith("> "):
+            text = clean_inline(line.lstrip()[2:].strip(), recap=recap)
+            if blocks and blocks[-1]["kind"] == "quote" and not prev_blank:
+                blocks[-1]["text"] += " " + text
+            else:
+                blocks.append({"kind": "quote", "text": text})
+        elif _BULLET_RE.match(line):
+            content = _BULLET_RE.sub("", line)
+            blocks.append({"kind": "li", "text": clean_inline(content, recap=recap),
+                           "accent": recap and bool(_LINKS_ONLY_RE.match(content.strip()))})
+        elif join_wrapped and not prev_blank and blocks and blocks[-1]["kind"] in ("p", "li"):
+            blocks[-1]["text"] += " " + clean_inline(line, recap=recap)
+        else:
+            blocks.append({"kind": "p", "text": clean_inline(line, recap=recap), "accent": accent})
+        prev_blank = False
+    return blocks
+
+
+def strip_masthead(blocks: list[dict]) -> list[dict]:
+    """Drop the leading run of headings (source title/date, or the recap's own
+    title line) — the card header already shows the title."""
+    i = 0
+    while i < len(blocks) and blocks[i]["kind"] in ("h2", "h3"):
+        i += 1
+    return blocks[i:]
+
+
+def strip_frontmatter(text: str) -> str:
+    lines = text.splitlines()
+    if lines and lines[0].strip() == "---":
+        for i in range(1, len(lines)):
+            if lines[i].strip() == "---":
+                return "\n".join(lines[i + 1:])
+    return text
 
 
 # ============================================================================
@@ -166,15 +301,67 @@ class Item:
     def paragraphs(self) -> list[str]:
         return [p.strip() for p in self.summary.split("\n") if p.strip()]
 
+    # masthead lines to skip in the preview fallback (bare "16 June 2026" dates)
+    _DATE_RE = re.compile(r"^\s*\d{1,2}\s+[A-Za-z]+\s+\d{4}\s*$")
+    # source headings that are scaffolding, not real content sections
+    _SKIP_HEADINGS = {"contents", "table of contents", "acknowledgments",
+                      "acknowledgements", "disclaimer", "references", "footnotes"}
+
+    def outline_kind(self) -> str:
+        """How the Outline view's segments were derived — drives an honest label.
+
+        'breakdown' = a real, /sync-computed decomposition; 'sections' = the
+        source's own markdown headings; 'preview' = just its first body lines.
+        """
+        if self.breakdown:
+            return "breakdown"
+        if self._heading_segments():
+            return "sections"
+        return "preview"
+
     def outline_segments(self) -> list[dict]:
-        """A genuine, data-driven decomposition for the Outline view."""
+        """Segments for the Outline view.
+
+        A real, /sync-computed breakdown wins. Otherwise fall back to the
+        source's own section headings — and, lacking those, its first few body
+        lines with the masthead (title, date, byline) skipped. The fallback is
+        a preview of the raw source, not a semantic decomposition.
+        """
         if self.breakdown:
             return self.breakdown
+        return self._heading_segments() or self._preview_segments()
+
+    def _heading_segments(self) -> list[dict]:
+        """Level-2 markdown headings from the raw source, as outline sections."""
+        if not self.text:
+            return []
         segs = []
-        for i, para in enumerate(self.paragraphs()[:6], 1):
-            words = para.split()
+        for line in self.text.splitlines():
+            m = re.match(r"^##\s+(.*\S)\s*$", line)
+            if not m:
+                continue
+            label = m.group(1).strip()
+            if label.lower() in self._SKIP_HEADINGS:
+                continue
+            segs.append({"at": "", "label": label, "target": ""})
+            if len(segs) >= 8:
+                break
+        return segs
+
+    def _preview_segments(self) -> list[dict]:
+        """First few real body lines, with masthead (title/date) skipped."""
+        segs = []
+        for para in self.paragraphs():
+            if para.startswith("# ") or self._DATE_RE.match(para):
+                continue
+            stripped = para.lstrip("#").strip()
+            if not stripped:
+                continue
+            words = stripped.split()
             label = " ".join(words[:11]) + ("…" if len(words) > 11 else "")
-            segs.append({"at": f"¶{i}", "label": label, "target": ""})
+            segs.append({"at": "", "label": label, "target": ""})
+            if len(segs) >= 6:
+                break
         return segs
 
 
@@ -292,13 +479,40 @@ class ScrollFrame(tk.Frame):
         self._win = self.canvas.create_window((0, 0), window=self.inner, anchor="nw")
         self.inner.bind("<Configure>", lambda e: self.canvas.configure(scrollregion=self.canvas.bbox("all")))
         self.canvas.bind("<Configure>", lambda e: self.canvas.itemconfigure(self._win, width=e.width))
-        for w in (self.canvas, self.inner):
-            w.bind("<MouseWheel>", self._wheel)
-            w.bind("<Button-4>", lambda e: self.canvas.yview_scroll(-1, "units"))
-            w.bind("<Button-5>", lambda e: self.canvas.yview_scroll(1, "units"))
+        self.bind_wheel(self.canvas)
+        self.bind_wheel(self.inner)
+
+    def bind_wheel(self, w):
+        """Bind the wheel handler onto one widget. Tk delivers a wheel event to the
+        widget *under the cursor*, not the scroll canvas — and the recap fills the pane
+        with child labels/frames — so binding only the canvas/inner leaves scrolling
+        dead everywhere the content actually is. `bind_wheel_to_children` walks the
+        freshly-rendered subtree after each render to cover them all."""
+        w.bind("<MouseWheel>", self._wheel)
+        w.bind("<Button-4>", self._wheel)
+        w.bind("<Button-5>", self._wheel)
+
+    def bind_wheel_to_children(self):
+        """(Re)bind the wheel across every descendant of `inner`. `tk.Text` is skipped
+        so a multi-line text area keeps its own vertical scrolling."""
+        def walk(w):
+            if not isinstance(w, tk.Text):
+                self.bind_wheel(w)
+            for c in w.winfo_children():
+                walk(c)
+        for c in self.inner.winfo_children():
+            walk(c)
 
     def _wheel(self, e):
-        self.canvas.yview_scroll(-1 if e.delta > 0 else 1, "units")
+        # Button-4/5 (X11/older trackpads) carry no `delta`; map them by button number.
+        num = getattr(e, "num", 0)
+        if num == 4:
+            step = -1
+        elif num == 5:
+            step = 1
+        else:
+            step = -1 if e.delta > 0 else 1
+        self.canvas.yview_scroll(step, "units")
 
 
 # ============================================================================
@@ -327,6 +541,7 @@ class ReviewApp:
         self._toast_after = None
         self._db = None                   # cached sqlite connection (lazy)
         self._stats_cache: list[dict] | None = None
+        self._creating = False            # new-source deposit in flight (form guard)
 
         root.title("Brain Feed — Review Queue")
         root.geometry("1120x740")
@@ -387,19 +602,38 @@ class ReviewApp:
     # -- key bindings ----------------------------------------------------------
     def _bind_keys(self) -> None:
         b = self.root.bind_all
-        b("<k>", lambda e: self.do_keep())
-        b("<Return>", lambda e: self.do_keep())
-        b("<d>", lambda e: self.do_drop())
-        b("<s>", lambda e: self.do_skip())
-        b("<Right>", lambda e: self.do_skip())
-        b("<o>", lambda e: self.open_url())
-        b("<u>", lambda e: self.do_undo())
-        b("<r>", lambda e: self.do_rescan())
-        b("<g>", lambda e: self.toggle_view())
-        b("<t>", lambda e: self.toggle_screen())
-        b("<q>", lambda e: self._on_close())
-        b("<Down>", lambda e: self.move(1))
-        b("<Up>", lambda e: self.move(-1))
+
+        def key(fn):
+            # Global single-key shortcuts must not fire while the user is typing in a
+            # form field, or "type", "quit", etc. would trigger mid-word. Let the
+            # widget's own class binding handle the keystroke and no-op the shortcut.
+            def handler(e):
+                if self._typing():
+                    return
+                fn()
+            return handler
+
+        b("<k>", key(self.do_keep))
+        b("<Return>", key(self.do_keep))
+        b("<d>", key(self.do_drop))
+        b("<s>", key(self.do_skip))
+        b("<Right>", key(self.do_skip))
+        b("<o>", key(self.open_url))
+        b("<u>", key(self.do_undo))
+        b("<r>", key(self.do_rescan))
+        b("<g>", key(self.toggle_view))
+        b("<t>", key(self.toggle_screen))
+        b("<q>", key(self._on_close))
+        b("<Down>", key(lambda: self.move(1)))
+        b("<Up>", key(lambda: self.move(-1)))
+
+    def _typing(self) -> bool:
+        """True when keyboard focus is in a text-input widget, so global shortcuts
+        should yield to normal typing."""
+        try:
+            return isinstance(self.root.focus_get(), (tk.Entry, tk.Text))
+        except Exception:
+            return False
 
     # -- data ------------------------------------------------------------------
     def reload(self, select_first=False, fresh_session=False) -> None:
@@ -563,13 +797,36 @@ class ReviewApp:
     # Reusable button widgets.
     # ======================================================================
     @staticmethod
-    def _round_rect(c, x1, y1, x2, y2, r, **kw):
-        """Draw a rounded rectangle on canvas c (smooth polygon). Returns item id."""
+    def _rounded_polygon(c, x1, y1, x2, y2, r, **kw):
+        """Draw a rounded rectangle whose corners are real arc points.
+
+        Tk's ``smooth=True`` polygon approximates the corners with a quadratic
+        B-spline that isn't pixel-symmetric, so the four corners round by
+        different amounts (an extra pixel on one, a missing pixel on another)
+        and the spline steps fringe the outline like particles. Instead we
+        emit the actual arc coordinates and draw a crisp (non-smooth) polygon,
+        so every corner is identical and the edges stay dead straight.
+        """
         r = max(0, min(r, (x2 - x1) / 2, (y2 - y1) / 2))
-        pts = [x1 + r, y1, x2 - r, y1, x2, y1, x2, y1 + r,
-               x2, y2 - r, x2, y2, x2 - r, y2, x1 + r, y2,
-               x1, y2, x1, y2 - r, x1, y1 + r, x1, y1]
-        return c.create_polygon(pts, smooth=True, **kw)
+        # Clockwise: each corner is (center_x, center_y, start_angle_degrees),
+        # swept 90° toward the next edge. Canvas y grows downward, so sin() is
+        # measured downward too — the angles below are in that convention.
+        corners = ((x2 - r, y1 + r, 270),   # top-right
+                   (x2 - r, y2 - r, 0),      # bottom-right
+                   (x1 + r, y2 - r, 90),     # bottom-left
+                   (x1 + r, y1 + r, 180))    # top-left
+        steps = 8  # points per corner; symmetric for all four
+        pts = []
+        for cx, cy, a0 in corners:
+            for i in range(steps + 1):
+                a = math.radians(a0 + 90 * i / steps)
+                pts.extend((cx + r * math.cos(a), cy + r * math.sin(a)))
+        return c.create_polygon(pts, smooth=False, **kw)
+
+    @staticmethod
+    def _round_rect(c, x1, y1, x2, y2, r, **kw):
+        """Draw a rounded rectangle on canvas c. Returns item id."""
+        return ReviewApp._rounded_polygon(c, x1, y1, x2, y2, r, **kw)
 
     def _action_button(self, parent, text, key, kind, command, enabled=True, width_mult=1):
         """kind: 'primary' | 'outline' | 'drop'. Returns a rounded canvas button.
@@ -584,6 +841,13 @@ class ReviewApp:
         elif kind == "primary":
             bg, fg, bd = t["ac"], t["ac_on"], t["ac"]
             chip_bg, chip_fg, chip_bd = t["kbd_on_bg"], t["ac_on"], blend("#000000", t["ac"], 0.18)
+        elif kind == "drop":
+            # Destructive action: keycap is tinted with the drop palette, not the
+            # affirmative accent, so it doesn't read like Keep.
+            bg, fg, bd = BASE["panel"], BASE["ink_muted"], BASE["rail"]
+            chip_bg = blend(BASE["drop_border"], BASE["bg"], 0.16)
+            chip_bd = blend(BASE["drop_border"], BASE["bg"], 0.40)
+            chip_fg = BASE["drop_ink"]
         else:
             bg, fg, bd = BASE["panel"], BASE["ink_muted"], BASE["rail"]
             chip_bg, chip_fg, chip_bd = t["kbd_bg"], t["ac"], t["kbd_bd"]
@@ -617,6 +881,7 @@ class ReviewApp:
                 elif kind == "drop":
                     c.itemconfig(body, outline=BASE["drop_border"])
                     c.itemconfig(lab_id, fill=BASE["drop_ink"])
+                    c.itemconfig(chip_box, fill=blend(BASE["drop_border"], BASE["bg"], 0.30))
                 else:
                     c.itemconfig(body, outline=BASE["hair"])
                     c.itemconfig(lab_id, fill=BASE["ink"])
@@ -760,9 +1025,7 @@ class ReviewApp:
         c.configure(scrollregion=(0, 0, W, n * row_h))
 
     def _round_rect(self, c, x1, y1, x2, y2, r, **kw):
-        pts = [x1 + r, y1, x2 - r, y1, x2, y1, x2, y1 + r, x2, y2 - r, x2, y2,
-               x2 - r, y2, x1 + r, y2, x1, y2, x1, y2 - r, x1, y1 + r, x1, y1]
-        return c.create_polygon(pts, smooth=True, **kw)
+        return self._rounded_polygon(c, x1, y1, x2, y2, r, **kw)
 
     def _clamp_lines(self, text, font, width, max_lines):
         words = text.split()
@@ -849,14 +1112,20 @@ class ReviewApp:
 
         if self.screen == "stats":
             self._render_stats()      # global view; works with an empty queue
-            return
+        else:
+            cur = self.current()
+            self._render_actions(cur)
+            if cur is None:
+                self._render_empty()
+            else:
+                self._render_item(cur)
 
-        cur = self.current()
-        self._render_actions(cur)
-        if cur is None:
-            self._render_empty()
-            return
+        # Wheel events land on whichever child is under the cursor, so rebind across the
+        # subtree we just built and reset the view to the top for the new content.
+        self.card.bind_wheel_to_children()
+        self.card.canvas.yview_moveto(0)
 
+    def _render_item(self, cur) -> None:
         t = self.t
         # header
         hpad = tk.Frame(self.head, bg=BASE["bg"])
@@ -886,7 +1155,11 @@ class ReviewApp:
         # view switch
         sw = tk.Frame(pad, bg=BASE["bg"])
         sw.pack(fill="x", pady=(0, 14))
-        tk.Label(sw, text=("Source outline" if self.view == "graph" else "Recap preview"),
+        if self.view == "graph":
+            head_label = "Source outline"
+        else:
+            head_label = "Recap" if self._recap_path(cur) is not None else "Source · no recap yet"
+        tk.Label(sw, text=head_label,
                  bg=BASE["bg"], fg=BASE["ink_faint"],
                  font=self.font("mono", 10, "bold")).pack(side="left")
         seg = tk.Frame(sw, bg=BASE["raise"], highlightthickness=1, highlightbackground=BASE["border"])
@@ -921,18 +1194,87 @@ class ReviewApp:
         for w in (cell, lab):
             w.bind("<Button-1>", lambda e: self.set_view(value))
 
+    # Feed items in the review queue are Backlog by definition (no recap yet), so
+    # this resolves to None for them; it flips to the recap once a kept source has
+    # been synced and RECAPS/<id>.md exists — and demo items (path=None) stay None.
+    def _recap_path(self, cur) -> Path | None:
+        if getattr(cur, "path", None) is None:
+            return None
+        p = RECAPS / f"{cur.path.stem}.md"
+        return p if p.is_file() else None
+
+    _PREVIEW_CAP = 10   # backlog previews stay previews: first N blocks, then an affordance
+
+    def _render_blocks(self, parent, blocks, *, recap) -> None:
+        """Stack parsed markdown blocks as frames — the idiom the card already uses."""
+        t = self.t
+        wrap = self._wrap() - 40
+        for i, b in enumerate(blocks):
+            kind = b["kind"]
+            top = 16 if i == 0 else (14 if kind in ("h2", "h3") else 8)
+            if kind in ("h2", "h3"):
+                tk.Label(parent, text=b["text"], bg=BASE["raise"], fg=BASE["ink_bright"],
+                         font=self.font("ui", t["recap"] + (3 if kind == "h2" else 1), "bold"),
+                         justify="left", anchor="w", wraplength=wrap).pack(anchor="w", padx=20, pady=(top, 2))
+            elif kind == "quote":
+                row = tk.Frame(parent, bg=BASE["raise"])
+                row.pack(fill="x", padx=20, pady=(top, 0))
+                tk.Frame(row, bg=t["ac"], width=3).pack(side="left", fill="y")
+                italic = tkfont.Font(family=self.ui_face, size=-t["recap"], slant="italic")
+                tk.Label(row, text=b["text"], bg=BASE["raise"], fg=BASE["ink_muted"], font=italic,
+                         justify="left", anchor="w", wraplength=wrap - 18).pack(side="left", anchor="w", padx=(12, 0))
+            elif kind == "li":
+                fg = t["ac"] if b.get("accent") else BASE["recap_ink"]
+                tk.Label(parent, text="•  " + b["text"], bg=BASE["raise"], fg=fg,
+                         font=self.font("ui", t["recap"]), justify="left", anchor="w",
+                         wraplength=wrap - 16).pack(anchor="w", padx=(30, 20), pady=(top, 0))
+            else:  # p
+                fg = t["ac"] if b.get("accent") else BASE["recap_ink"]
+                tk.Label(parent, text=b["text"], bg=BASE["raise"], fg=fg,
+                         font=self.font("ui", t["recap"]), justify="left", anchor="w",
+                         wraplength=wrap).pack(anchor="w", padx=20, pady=(top, 0))
+
+    def _render_more(self, parent, hidden, cur) -> None:
+        """Dim '… N more · open source' affordance below a capped backlog preview."""
+        tk.Frame(parent, bg=BASE["border_soft"], height=1).pack(fill="x", padx=20, pady=(14, 0))
+        clickable = getattr(cur, "path", None) is not None
+        text = f"…  {hidden} more block{'s' if hidden != 1 else ''}"
+        if clickable:
+            text += "  ·  open source"
+        lab = tk.Label(parent, text=text, bg=BASE["raise"], fg=BASE["ink_faint"],
+                       font=self.font("mono", 10), cursor=("hand2" if clickable else ""))
+        lab.pack(anchor="w", padx=20, pady=(8, 0))
+        if clickable:
+            lab.bind("<Button-1>", lambda e: self.open_source(cur))
+
     def _render_recap(self, pad, cur):
         t = self.t
+        recap_path = self._recap_path(cur)
         # recap card
         card = tk.Frame(pad, bg=BASE["raise"], highlightthickness=1, highlightbackground=BASE["border"])
         card.pack(fill="x")
+        shell = tk.Frame(card, bg=BASE["raise"])
+        shell.pack(fill="x", expand=True)
         if t["vivid"]:
-            tk.Frame(card, bg=t["ac"], width=3).pack(side="left", fill="y")
-        body = tk.Frame(card, bg=BASE["raise"])
-        body.pack(fill="x", expand=True)
-        tk.Label(body, text=cur.summary, bg=BASE["raise"], fg=BASE["recap_ink"],
-                 font=self.font("ui", t["recap"]), justify="left",
-                 wraplength=self._wrap() - 40).pack(anchor="w", padx=20, pady=16)
+            tk.Frame(shell, bg=t["ac"], width=3).pack(side="left", fill="y")
+        body = tk.Frame(shell, bg=BASE["raise"])
+        body.pack(side="left", fill="x", expand=True)
+
+        if recap_path is not None:
+            # Synthesised recap present → render it whole.
+            src = strip_frontmatter(recap_path.read_text(encoding="utf-8", errors="replace"))
+            blocks = strip_masthead(parse_blocks(src.splitlines(), recap=True, join_wrapped=True))
+            self._render_blocks(body, blocks, recap=True)
+        else:
+            # Backlog: a marked source preview, capped so it stays a preview.
+            lines = [ln for ln in cur.summary.split("\n") if ln.strip()]
+            blocks = strip_masthead(parse_blocks(lines, recap=False))
+            shown = blocks[:self._PREVIEW_CAP]
+            self._render_blocks(body, shown, recap=False)
+            hidden = len(blocks) - len(shown)
+            if hidden > 0:
+                self._render_more(body, hidden, cur)
+        tk.Frame(body, bg=BASE["raise"], height=16).pack(fill="x")
 
         # tags
         if cur.tags:
@@ -994,8 +1336,15 @@ class ReviewApp:
                  highlightthickness=1, highlightbackground=BASE["border"]).pack(side="left", padx=11)
 
         segs = cur.outline_segments()
-        self._branch(pad, f"BREAKDOWN · {len(segs)} SEGMENT{'S' if len(segs) != 1 else ''}",
-                     [(s.get("at", ""), s.get("label", ""),
+        n = len(segs)
+        heading = {
+            "breakdown": f"BREAKDOWN · {n} SEGMENT{'S' if n != 1 else ''}",
+            "sections": f"OUTLINE · {n} SECTION{'S' if n != 1 else ''}",
+            "preview": f"PREVIEW · FIRST {n} LINE{'S' if n != 1 else ''}",
+        }[cur.outline_kind()]
+        # rows carry no locator number — just the node and its optional target
+        self._branch(pad, heading,
+                     [("", s.get("label", ""),
                        (f"↳ feeds {s['target']}" if s.get("target") else "")) for s in segs])
 
         if cur.overlaps:
@@ -1003,7 +1352,7 @@ class ReviewApp:
                          f"PAGE{'S' if len(cur.overlaps) != 1 else ''}",
                          [("", o["page"], o["note"]) for o in cur.overlaps], page_style=True)
         elif cur.tags:
-            self._branch(pad, "TAGS", [("", f"#{tg}", "") for tg in cur.tags], page_style=True)
+            self._render_tags(pad, cur.tags)
 
     def _branch(self, parent, label, rows, page_style=False):
         t = self.t
@@ -1036,6 +1385,19 @@ class ReviewApp:
                 tk.Label(txt, text=note, bg=BASE["bg"], fg=BASE["ink_dim"],
                          font=(self.font("mono", 11) if not page_style else self.font("ui", 12)),
                          justify="left", wraplength=self._wrap() - 80).pack(anchor="w", pady=(4, 0))
+
+    def _render_tags(self, parent, tags):
+        """Tags as plain #tag chips laid out side by side — not a graph branch."""
+        br = tk.Frame(parent, bg=BASE["bg"])
+        br.pack(fill="x", pady=(16, 0))
+        tk.Label(br, text="TAGS", bg=BASE["bg"], fg=BASE["ink_faint"],
+                 font=self.font("mono", 10, "bold")).pack(anchor="w", padx=(36, 0), pady=(0, 6))
+        row = tk.Frame(br, bg=BASE["bg"])
+        row.pack(anchor="w", padx=(36, 0))
+        for tg in tags:
+            tk.Label(row, text=f"#{tg}", bg=BASE["node"], fg=BASE["ink_muted"],
+                     font=self.font("mono", 11), padx=9, pady=4,
+                     highlightthickness=1, highlightbackground=BASE["border"]).pack(side="left", padx=(0, 8))
 
     def _render_actions(self, cur):
         has = cur is not None
@@ -1162,6 +1524,17 @@ class ReviewApp:
         elif cur:
             self.flash("No url on this item")
 
+    def open_source(self, cur):
+        """Reveal the full raw source file behind a capped backlog preview."""
+        path = getattr(cur, "path", None)
+        if path is None:
+            return
+        try:
+            subprocess.Popen(["open", str(path)])
+            self.flash(f"Opening {path.name}")
+        except Exception:
+            self.flash("Could not open source")
+
     def do_rescan(self):
         self.reload(select_first=True, fresh_session=True)
         self.render_queue()
@@ -1264,6 +1637,13 @@ class ReviewApp:
         pad = tk.Frame(self.card.inner, bg=BASE["bg"])
         pad.pack(fill="both", expand=True, padx=t["card_padx"], pady=t["card_pady"])
 
+        # -- new-source form (deposit straight into sources/) ------------------
+        self._render_new_source_form(pad)
+
+        # -- per-feed table ----------------------------------------------------
+        tk.Label(pad, text="PER-FEED", bg=BASE["bg"], fg=BASE["ink_faint"],
+                 font=self.font("mono", 10, "bold")).pack(anchor="w", pady=(0, 8))
+
         rows = self._stats_cache or []
         cols = [("FEED", "id", 22), ("ADAPTER", "adapter", 9), ("TRUST", "trust", 7),
                 ("CAP", "cap", 5), ("SEEN", "total_seen", 6), ("TODAY", "today_seen", 7),
@@ -1308,6 +1688,146 @@ class ReviewApp:
                  "enter the review queue, so they stay N/A by design.",
                  bg=BASE["bg"], fg=BASE["ink_dim2"], font=self.font("ui", 12),
                  justify="left", wraplength=self._wrap()).pack(anchor="w")
+
+    # -- new-source form -------------------------------------------------------
+    def _render_new_source_form(self, parent):
+        """A small form on the stats screen that deposits one source straight into
+        sources/ — the same render-via-brain-clip + place path the feeder uses, so the
+        frontmatter is contract-valid and the next /sync folds it in. Fill URL to clip a
+        page, or write text for a note (both optional; at least one is required)."""
+        t = self.t
+        card = tk.Frame(parent, bg=BASE["raise"], highlightthickness=1,
+                        highlightbackground=BASE["border"])
+        card.pack(fill="x", pady=(0, 22))
+        inner = tk.Frame(card, bg=BASE["raise"])
+        inner.pack(fill="x", padx=18, pady=16)
+
+        tk.Label(inner, text="NEW SOURCE", bg=BASE["raise"], fg=BASE["ink_faint"],
+                 font=self.font("mono", 10, "bold")).pack(anchor="w")
+        tk.Label(inner, text="Clip a URL or jot a note straight into sources/ — the next "
+                 "/sync folds it into the wiki.", bg=BASE["raise"], fg=BASE["ink_dim2"],
+                 font=self.font("ui", 12), justify="left",
+                 wraplength=self._wrap() - 40).pack(anchor="w", pady=(3, 12))
+
+        self._ns_title = self._form_entry(inner, "Title", "optional — derived if left blank")
+        self._ns_url = self._form_entry(inner, "URL", "a web page to fetch, or a link to attach")
+        self._ns_tags = self._form_entry(inner, "Tags", "optional — comma-separated")
+
+        tk.Label(inner, text="TEXT", bg=BASE["raise"], fg=BASE["ink_faint"],
+                 font=self.font("mono", 9, "bold")).pack(anchor="w", pady=(10, 0))
+        tk.Label(inner, text="paste text for a note; leave blank to fetch the URL above",
+                 bg=BASE["raise"], fg=BASE["ink_fainter"],
+                 font=self.font("mono", 9)).pack(anchor="w", pady=(2, 4))
+        body = tk.Text(inner, height=4, bg=BASE["sunk"], fg=BASE["ink"],
+                       insertbackground=t["ac"], relief="flat", bd=0, wrap="word",
+                       highlightthickness=1, highlightbackground=BASE["border"],
+                       highlightcolor=t["ac"], font=self.font("ui", 12), padx=10, pady=8)
+        body.pack(fill="x", pady=(0, 12))
+        self._ns_body = body
+
+        srow = tk.Frame(inner, bg=BASE["raise"])
+        srow.pack(fill="x")
+        self._ns_status = tk.Label(srow, text="", bg=BASE["raise"], fg=BASE["ink_faint"],
+                                   font=self.font("mono", 10), anchor="w", justify="left",
+                                   wraplength=self._wrap() - 220)
+        self._ns_status.pack(side="left", fill="x", expand=True)
+        self._ns_btn = self._simple_button(srow, "Add to sources", self._submit_new_source)
+        self._ns_btn.pack(side="right")
+
+    def _form_entry(self, parent, label, hint):
+        t = self.t
+        tk.Label(parent, text=label.upper(), bg=BASE["raise"], fg=BASE["ink_faint"],
+                 font=self.font("mono", 9, "bold")).pack(anchor="w", pady=(8, 3))
+        e = tk.Entry(parent, bg=BASE["sunk"], fg=BASE["ink"], insertbackground=t["ac"],
+                     relief="flat", bd=0, highlightthickness=1,
+                     highlightbackground=BASE["border"], highlightcolor=t["ac"],
+                     font=self.font("ui", 12))
+        e.pack(fill="x", ipady=6)
+        if hint:
+            tk.Label(parent, text=hint, bg=BASE["raise"], fg=BASE["ink_fainter"],
+                     font=self.font("mono", 9)).pack(anchor="w", pady=(3, 0))
+        return e
+
+    def _simple_button(self, parent, text, command):
+        """A primary rounded button with no keyboard chip (for the form), drawn on the
+        card's raised background so its corners blend."""
+        t = self.t
+        font = self.font("ui", 12, "bold")
+        W, H = font.measure(text) + 36, t["btn_h"]
+        r = round(H * 0.30)
+        bg, fg, bd = t["ac"], t["ac_on"], t["ac"]
+        c = tk.Canvas(parent, width=W, height=H, bg=BASE["raise"], bd=0,
+                      highlightthickness=0, cursor="hand2")
+        body = self._round_rect(c, 1, 1, W - 1, H - 1, r, fill=bg, outline=bd, width=1)
+        lab = c.create_text(W / 2, H / 2, text=text, fill=fg, font=font)
+        c.bind("<Button-1>", lambda e: command())
+
+        def enter(_):
+            nb = blend("#ffffff", t["ac"], 0.10)
+            c.itemconfig(body, fill=nb, outline=nb)
+
+        def leave(_):
+            c.itemconfig(body, fill=bg, outline=bd)
+
+        c.bind("<Enter>", enter)
+        c.bind("<Leave>", leave)
+        return c
+
+    def _ns_set_status(self, msg, err=False):
+        if getattr(self, "_ns_status", None) is None:
+            return
+        try:
+            self._ns_status.configure(
+                text=msg, fg=(BASE["drop_ink"] if err else BASE["ink_faint"]))
+        except tk.TclError:
+            pass                                  # form was torn down; nothing to update
+
+    def _submit_new_source(self):
+        if getattr(self, "_creating", False):
+            return
+        title = self._ns_title.get().strip()
+        url = self._ns_url.get().strip()
+        tags = parse_tags(self._ns_tags.get())
+        body = self._ns_body.get("1.0", "end").strip()
+        if not url and not body:
+            self._ns_set_status("Enter a URL or write some text.", err=True)
+            return
+        if body:                                   # text present → a note (url optional)
+            item = {"source_kind": "text", "type": "note", "title": title or None,
+                    "url": url or None, "body": body}
+        else:                                      # url only → fetch + extract the page
+            item = {"source_kind": "url", "url": url, "title": title or None}
+        self._creating = True
+        self._ns_set_status("Creating… (fetching a URL can take a few seconds)")
+        # brain-clip may fetch the network → run off the Tk thread; marshal the result
+        # back with root.after so only the main thread touches widgets.
+        threading.Thread(target=self._create_source_worker, args=(item, tags),
+                         daemon=True).start()
+
+    def _create_source_worker(self, item, tags):
+        try:
+            proposed, content, stderr = brain_feed.render_via_clip(item)
+            if not content:
+                msg = ((stderr or "").strip().splitlines()[-1:] or ["render failed"])[0]
+                self.root.after(0, lambda: self._finish_create(None, msg))
+                return
+            content = inject_tags(content, tags)
+            dest = brain_feed.place(content, proposed, SOURCES, VAULT)
+        except Exception as e:                     # subprocess/timeout/write failure
+            err = str(e)
+            self.root.after(0, lambda: self._finish_create(None, err))
+            return
+        self.root.after(0, lambda: self._finish_create(dest, None))
+
+    def _finish_create(self, dest, err):
+        self._creating = False
+        if dest is None:
+            self._ns_set_status(f"Failed: {(err or 'unknown error')[:120]}", err=True)
+            return
+        self.flash(f"Created → {dest.relative_to(VAULT)}")
+        if self.screen == "stats":                 # refresh the pane → clears the form
+            self.refresh_stats()
+            self.render_main()
 
     # -- toast -----------------------------------------------------------------
     def flash(self, msg: str):
