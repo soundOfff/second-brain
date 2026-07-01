@@ -1200,7 +1200,9 @@ class ReviewApp:
         inner = self.card.inner
         inner.configure(padx=0)
         pad = tk.Frame(inner, bg=BASE["bg"])
-        pad.pack(fill="both", expand=True, padx=t["card_padx"], pady=t["card_pady"])
+        # Bottom-only inset: the header block above the hairline already provides the
+        # top breathing room, so a symmetric pady reads as dead space at scroll-top.
+        pad.pack(fill="both", expand=True, padx=t["card_padx"], pady=(0, t["card_pady"]))
 
         # view switch
         sw = tk.Frame(pad, bg=BASE["bg"])
@@ -1685,7 +1687,9 @@ class ReviewApp:
                  font=self.font("mono", 10)).pack(anchor="w", pady=(4, 0))
 
         pad = tk.Frame(self.card.inner, bg=BASE["bg"])
-        pad.pack(fill="both", expand=True, padx=t["card_padx"], pady=t["card_pady"])
+        # Bottom-only inset: the header block above the hairline already provides the
+        # top breathing room, so a symmetric pady reads as dead space at scroll-top.
+        pad.pack(fill="both", expand=True, padx=t["card_padx"], pady=(0, t["card_pady"]))
 
         # -- per-feed table ----------------------------------------------------
         tk.Label(pad, text="PER-FEED", bg=BASE["bg"], fg=BASE["ink_faint"],
@@ -2147,7 +2151,9 @@ class ReviewApp:
                  font=self.font("mono", 10)).pack(anchor="w", pady=(4, 0))
 
         pad = tk.Frame(self.card.inner, bg=BASE["bg"])
-        pad.pack(fill="both", expand=True, padx=t["card_padx"], pady=t["card_pady"])
+        # Bottom-only inset: the header block above the hairline already provides the
+        # top breathing room, so a symmetric pady reads as dead space at scroll-top.
+        pad.pack(fill="both", expand=True, padx=t["card_padx"], pady=(0, t["card_pady"]))
 
         # -- feeder: the global daily cap ---------------------------------------
         card = tk.Frame(pad, bg=BASE["raise"], highlightthickness=1,
