@@ -637,6 +637,7 @@ class ReviewApp:
         t["kbd_bg"] = blend(a, BASE["bg"], 0.16)
         t["kbd_bd"] = blend(a, BASE["bg"], 0.34)
         t["kbd_on_bg"] = blend("#000000", a, 0.30)
+        t["field_bd"] = blend(a, BASE["raise"], 0.55)
         t["tag_bg"] = BASE["node"]
         t["vivid"] = vivid
         return t
@@ -1857,7 +1858,7 @@ class ReviewApp:
                      font=self.font("mono", 9)).pack(anchor="w", pady=(2, 4))
             body = tk.Text(inner, height=4, bg=BASE["sunk"], fg=BASE["ink"],
                            insertbackground=t["ac"], relief="flat", bd=0, wrap="word",
-                           highlightthickness=1, highlightbackground=BASE["border"],
+                           highlightthickness=1, highlightbackground=t["field_bd"],
                            highlightcolor=t["ac"], font=self.font("ui", 12), padx=10, pady=8)
             body.pack(fill="x")
             if vals.get("body"):
@@ -1951,7 +1952,7 @@ class ReviewApp:
                  font=self.font("mono", 9, "bold")).pack(anchor="w", pady=(8, 3))
         e = tk.Entry(parent, bg=BASE["sunk"], fg=BASE["ink"], insertbackground=t["ac"],
                      relief="flat", bd=0, highlightthickness=1,
-                     highlightbackground=BASE["border"], highlightcolor=t["ac"],
+                     highlightbackground=t["field_bd"], highlightcolor=t["ac"],
                      font=self.font("ui", 12))
         e.pack(fill="x", ipady=6)
         if value:
