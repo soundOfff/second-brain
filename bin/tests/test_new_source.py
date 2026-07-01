@@ -99,6 +99,7 @@ class CreateFlow(unittest.TestCase):
         self.app = gui.ReviewApp(self.root, demo=True)
         self.app._stats_cache = []
         self.app.screen = "stats"
+        self.app._ns_expanded = True                  # form is collapsed by default
         self.app.render_main()                        # builds the form widgets
 
     def tearDown(self):
@@ -190,6 +191,7 @@ class FeedSubscribe(unittest.TestCase):
         self.app = gui.ReviewApp(self.root, demo=True)
         self.app._stats_cache = []
         self.app.screen = "stats"
+        self.app._ns_expanded = True                  # form is collapsed by default
         self.app.render_main()
 
     def tearDown(self):
@@ -203,6 +205,15 @@ class FeedSubscribe(unittest.TestCase):
 
     def _feeds(self):
         return bf.load_config(self.cfg)["feeds"]
+
+    def test_form_collapsed_behind_expander_by_default(self):
+        self.app._ns_expanded = False
+        self.app.render_main()
+        self.assertFalse(self.app._ns_title.winfo_exists())    # only the expander shows
+        self.app._ns_set_expanded(True)
+        self.assertTrue(self.app._ns_title.winfo_exists())     # expander builds the form
+        self.app._ns_set_expanded(False)
+        self.assertFalse(self.app._ns_title.winfo_exists())    # hide collapses it again
 
     def test_type_selector_swaps_the_fields(self):
         self.assertTrue(self.app._ns_body.winfo_exists())      # webpage: TEXT area

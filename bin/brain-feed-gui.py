@@ -584,6 +584,7 @@ class ReviewApp:
         self._ns_kind = "webpage"         # new-source type: webpage | rss | api
         self._ns_trust = "queue"          # feed trust for rss/api subscriptions
         self._ns_mode = "url"             # api mapping mode: url | text
+        self._ns_expanded = False         # form starts collapsed behind "+ Add source"
         self._ns_vals: dict = {}          # field values carried across form rebuilds
 
         root.title("Brain Feed — Review Queue")
@@ -1686,9 +1687,6 @@ class ReviewApp:
         pad = tk.Frame(self.card.inner, bg=BASE["bg"])
         pad.pack(fill="both", expand=True, padx=t["card_padx"], pady=t["card_pady"])
 
-        # -- new-source form (deposit straight into sources/) ------------------
-        self._render_new_source_form(pad)
-
         # -- per-feed table ----------------------------------------------------
         tk.Label(pad, text="PER-FEED", bg=BASE["bg"], fg=BASE["ink_faint"],
                  font=self.font("mono", 10, "bold")).pack(anchor="w", pady=(0, 8))
@@ -1738,6 +1736,9 @@ class ReviewApp:
                  bg=BASE["bg"], fg=BASE["ink_dim2"], font=self.font("ui", 12),
                  justify="left", wraplength=self._wrap()).pack(anchor="w")
 
+        # -- new-source form (collapsed behind "+ Add source") ------------------
+        self._render_new_source_form(pad)
+
     # -- new-source form -------------------------------------------------------
     def _render_new_source_form(self, parent):
         """A form on the stats screen with a TYPE selector that routes what a URL *is*:
@@ -1748,11 +1749,12 @@ class ReviewApp:
                   brain_feed.append_feed — the daily feeder pulls it from then on.
 
         The card rebuilds in place when the type (or trust/mode) changes; shared field
-        values are carried across rebuilds via _ns_collect/_ns_vals."""
+        values are carried across rebuilds via _ns_collect/_ns_vals. It sits below the
+        per-feed table, collapsed behind a "+ Add source" expander until needed."""
         holder = tk.Frame(parent, bg=BASE["bg"])
-        holder.pack(fill="x", pady=(0, 22))
+        holder.pack(fill="x", pady=(22, 0))
         self._ns_holder = holder
-        self._build_ns_card()
+        self._ns_fill_holder()
 
     _NS_BLURB = {
         "webpage": "Clip a URL or jot a note straight into sources/ — the next /sync "
@@ -1788,6 +1790,10 @@ class ReviewApp:
                  font=self.font("mono", 10, "bold")).pack(side="left")
         self._segmented(head, [("webpage", "webpage"), ("rss", "rss"), ("api", "api")],
                         kind, self._ns_set_kind).pack(side="right")
+        hide = tk.Label(head, text="hide ✕", bg=BASE["raise"], fg=BASE["ink_faint"],
+                        font=self.font("mono", 9, "bold"), cursor="hand2")
+        hide.pack(side="right", padx=(0, 12))
+        hide.bind("<Button-1>", lambda e: self._ns_set_expanded(False))
         tk.Label(inner, text=self._NS_BLURB[kind], bg=BASE["raise"], fg=BASE["ink_dim2"],
                  font=self.font("ui", 12), justify="left",
                  wraplength=self._wrap() - 40).pack(anchor="w", pady=(3, 12))
@@ -1923,12 +1929,28 @@ class ReviewApp:
             pass
         return out
 
+    def _ns_fill_holder(self):
+        """Render the holder's current face: the form card, or the collapsed expander."""
+        if self._ns_expanded:
+            self._build_ns_card()
+            return
+        for w in self._ns_holder.winfo_children():
+            w.destroy()
+        self._simple_button(self._ns_holder, "＋  Add source",
+                            lambda: self._ns_set_expanded(True),
+                            canvas_bg=BASE["bg"]).pack(anchor="w")
+
+    def _ns_set_expanded(self, on: bool):
+        if self._ns_expanded != on:
+            self._ns_expanded = on
+            self._ns_rebuild()
+
     def _ns_rebuild(self):
         self._ns_vals = self._ns_collect()
         # The in-place rebuild momentarily shrinks the scroll canvas's inner frame,
         # which clamps the viewport to the top — snapshot and restore it.
         frac = self.card.canvas.yview()[0]
-        self._build_ns_card()
+        self._ns_fill_holder()
         self.card.bind_wheel_to_children()   # fresh widgets need the wheel again
         self.card.inner.update_idletasks()
         self.card.canvas.configure(scrollregion=self.card.canvas.bbox("all"))
@@ -1971,15 +1993,16 @@ class ReviewApp:
                      font=self.font("mono", 9)).pack(anchor="w", pady=(3, 0))
         return e
 
-    def _simple_button(self, parent, text, command):
+    def _simple_button(self, parent, text, command, canvas_bg=None):
         """A primary rounded button with no keyboard chip (for the form), drawn on the
-        card's raised background so its corners blend."""
+        card's raised background so its corners blend; pass canvas_bg when the button
+        sits on a different surface (e.g. the stats pane's plain bg)."""
         t = self.t
         font = self.font("ui", 12, "bold")
         W, H = font.measure(text) + 36, t["btn_h"]
         r = round(H * 0.30)
         bg, fg, bd = t["ac"], t["ac_on"], t["ac"]
-        c = tk.Canvas(parent, width=W, height=H, bg=BASE["raise"], bd=0,
+        c = tk.Canvas(parent, width=W, height=H, bg=canvas_bg or BASE["raise"], bd=0,
                       highlightthickness=0, cursor="hand2")
         body = self._round_rect(c, 1, 1, W - 1, H - 1, r, fill=bg, outline=bd, width=1)
         lab = c.create_text(W / 2, H / 2, text=text, fill=fg, font=font)
