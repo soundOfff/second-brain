@@ -44,6 +44,7 @@ from __future__ import annotations
 
 import email as emaillib
 import email.header
+import json
 import os
 import re
 import shutil
@@ -99,8 +100,8 @@ def localname(tag: str) -> str:
     return tag.rsplit("}", 1)[-1] if "}" in tag else tag
 
 
-def fetch_url(url: str, timeout: int = 30) -> bytes:
-    req = urllib.request.Request(url, headers={"User-Agent": UA})
+def fetch_url(url: str, timeout: int = 30, user_agent: str | None = None) -> bytes:
+    req = urllib.request.Request(url, headers={"User-Agent": user_agent or UA})
     with urllib.request.urlopen(req, timeout=timeout) as resp:  # noqa: S310 (trusted feeds)
         return resp.read()
 
@@ -611,7 +612,88 @@ def adapter_email(feed: dict) -> list[dict]:
     return out
 
 
-ADAPTERS = {"rss": adapter_rss, "list": adapter_list, "yt": adapter_yt, "email": adapter_email}
+# --- api: any public JSON HTTP endpoint via a declarative `feeds.toml` mapping ---
+#
+# One adapter reads many APIs because the *shape* lives in static config (CONTEXT.md ->
+# Mapping), not code: `items_path` locates the item array, and `url_field`/`title_field`/
+# `guid_field`/`body_field` are dotted paths into each item. The path language is
+# deliberately minimal — dotted dict keys only, no wildcards/filters/jq — which keeps this
+# adapter pure-stdlib (docs/adr/0002). AI may *author* a mapping at config time; it is
+# never consulted at poll time, so `api` runs in the 01:30 cron with no model, no key.
+
+def resolve_path(obj, path: str):
+    """Walk a dotted path of dict keys. `""` returns obj unchanged (so items_path="" means
+    'the response IS the array'). Returns None on any missing key or non-dict step — lists
+    are not indexed and traversing into a scalar fails, both by design."""
+    if path == "":
+        return obj
+    cur = obj
+    for key in path.split("."):
+        if not isinstance(cur, dict) or key not in cur:
+            return None
+        cur = cur[key]
+    return cur
+
+
+def _scalar(v) -> str | None:
+    """A resolved field value as a trimmed string, or None. Containers (dict/list) and
+    empty/whitespace strings collapse to None — a field must be a usable scalar."""
+    if v is None or isinstance(v, (dict, list)):
+        return None
+    s = str(v).strip()
+    return s or None
+
+
+def adapter_api(feed: dict) -> list[dict]:
+    url = feed.get("url")
+    if not url:
+        log(f"[{feed['id']}] api: no `url` in feeds.toml")
+        return []
+    try:
+        raw = fetch_url(url, user_agent=feed.get("user_agent"))
+        data = json.loads(raw)
+    except Exception as e:  # noqa: BLE001 (network/JSON errors disable this run, don't crash)
+        log(f"[{feed['id']}] api: fetch/parse failed — {e}")
+        return []
+
+    arr = resolve_path(data, feed.get("items_path", ""))
+    if not isinstance(arr, list):
+        log(f"[{feed['id']}] api: items_path '{feed.get('items_path', '')}' "
+            f"did not resolve to a list")
+        return []
+
+    mode = feed.get("mode", "url")
+    url_field = feed.get("url_field", "")
+    title_field = feed.get("title_field", "")
+    guid_field = feed.get("guid_field", "")
+    body_field = feed.get("body_field", "")
+
+    out = []
+    for it in arr:
+        if not isinstance(it, dict):
+            continue
+        # url_field is read in BOTH modes — for provenance and cross-source dedup.
+        url_v = _scalar(resolve_path(it, url_field)) if url_field else None
+        title_v = _scalar(resolve_path(it, title_field)) if title_field else None
+        guid_v = _scalar(resolve_path(it, guid_field)) if guid_field else None
+        guid = guid_v or url_v or title_v          # same fallback chain as parse_feed_xml
+        if not guid:
+            continue                                # no stable dedup key -> can't take it
+
+        if mode == "text":
+            body_v = _scalar(resolve_path(it, body_field)) if body_field else None
+            out.append({"guid": guid, "url": url_v, "title": title_v,
+                        "body": body_v, "type": None, "source_kind": "text"})
+        else:  # "url" (default): let brain-clip fetch the link, like rss
+            if not url_v:
+                continue                            # can't fetch an item with no link
+            out.append({"guid": guid, "url": url_v, "title": title_v,
+                        "body": None, "type": None, "source_kind": "url"})
+    return out
+
+
+ADAPTERS = {"rss": adapter_rss, "list": adapter_list, "yt": adapter_yt,
+            "email": adapter_email, "api": adapter_api}
 
 
 def collect(feed: dict) -> tuple[list[dict], dict | None]:
