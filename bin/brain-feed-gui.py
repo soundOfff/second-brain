@@ -1692,17 +1692,20 @@ class ReviewApp:
                  font=self.font("mono", 10, "bold")).pack(anchor="w", pady=(0, 8))
 
         rows = self._stats_cache or []
-        cols = [("FEED", "id", 22), ("ADAPTER", "adapter", 9), ("TRUST", "trust", 7),
-                ("CAP", "cap", 5), ("SEEN", "total_seen", 6), ("TODAY", "today_seen", 7),
-                ("QUEUED", "queued", 8), ("KEEP-RATE", "keep_rate", 11)]
+        # (label, key, width, anchor) — FEED is the row's identity and stays
+        # left-aligned; the short/numeric value columns center in their cells.
+        cols = [("FEED", "id", 22, "w"), ("ADAPTER", "adapter", 9, "center"),
+                ("TRUST", "trust", 7, "center"), ("CAP", "cap", 5, "center"),
+                ("SEEN", "total_seen", 6, "center"), ("TODAY", "today_seen", 7, "center"),
+                ("QUEUED", "queued", 8, "center"), ("KEEP-RATE", "keep_rate", 11, "center")]
         table = tk.Frame(pad, bg=BASE["raise"], highlightthickness=1,
                          highlightbackground=BASE["border"])
         table.pack(fill="x")
         hdr = tk.Frame(table, bg=BASE["raise"])
         hdr.pack(fill="x")
-        for i, (label, _key, w) in enumerate(cols):
+        for i, (label, _key, w, anc) in enumerate(cols):
             tk.Label(hdr, text=label, bg=BASE["raise"], fg=BASE["ink_faint"],
-                     font=self.font("mono", 10, "bold"), width=w, anchor="w",
+                     font=self.font("mono", 10, "bold"), width=w, anchor=anc,
                      padx=8, pady=8).grid(row=0, column=i, sticky="w")
         for row in rows:
             rf = tk.Frame(table, bg=BASE["raise"])
@@ -1710,7 +1713,7 @@ class ReviewApp:
             tk.Frame(rf, bg=BASE["border_soft"], height=1).pack(fill="x")
             line = tk.Frame(rf, bg=BASE["raise"])
             line.pack(fill="x")
-            for i, (_label, key, w) in enumerate(cols):
+            for i, (_label, key, w, anc) in enumerate(cols):
                 val = row[key]
                 if key == "keep_rate":
                     text = "N/A" if val is None else f"{val * 100:.0f}%"
@@ -1719,7 +1722,7 @@ class ReviewApp:
                     text = str(val)
                     fg = BASE["ink"] if key == "id" else BASE["ink_muted"]
                 tk.Label(line, text=text, bg=BASE["raise"], fg=fg,
-                         font=self.font("mono", 11), width=w, anchor="w",
+                         font=self.font("mono", 11), width=w, anchor=anc,
                          padx=8, pady=7).grid(row=0, column=i, sticky="w")
 
         if not rows:
