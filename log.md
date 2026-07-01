@@ -597,3 +597,31 @@ Turns capture from push-only into pull: the brain now feeds itself unattended.
 - **Untouched.** `sources/`, the poll core, adapters, and the review flow. The config-time
   mapping-inference skill (ADR-0002's other half) remains unbuilt — the api form fields
   are hand-filled for now, mirroring the commented examples in `feeds.toml`.
+
+## 2026-07-01 — fix: UI polish batch on the desktop triage app (branch fix/gui-ui-polish)
+
+- **Command:** interactive session · 7 user-reported macOS UI issues, one commit per fix
+  on `fix/gui-ui-polish` (plus a base commit carrying the prior WIP onto the branch).
+- **Form outline.** Entries/Text drew their idle ring in the neutral border gray, which
+  Aqua washes out to near-white. New theme color `field_bd` (accent ⊕ raise @ 0.55) for
+  the idle ring; focus stays full accent.
+- **Screen shortcuts.** `r` / `f` / `s` jump straight to Review Queue / Feed Stats /
+  Settings; skip lost `s` (keeps `→`), rescan moved `r` → `⇧R`. Bindings now derive from
+  a class-level `SHORTCUTS` table — the same table renders as a read-only SHORTCUTS
+  reference card on Settings, so bindings and docs can't drift (guarded by a test).
+- **Scroll jump.** Picking TYPE/TRUST/MODE in the new-source form rebuilt the card and
+  clamped the scroll canvas to the top; `_ns_rebuild` now snapshots and restores the
+  yview fraction.
+- **Stats layout.** The per-feed table now leads the screen; the NEW SOURCE form moved
+  below it, collapsed behind a "＋ Add source" expander (hide ✕ in the card header),
+  session-sticky via `_ns_expanded`.
+- **Table alignment.** Value columns (adapter → keep-rate) center in their cells; FEED
+  stays left as the row identity.
+- **Section inset.** All scrolled screens packed their body with a symmetric `card_pady`,
+  leaving a ~22px dead band under the header hairline at scroll-top; now bottom-only.
+- **feeds.toml.** Four ready-to-uncomment `api` testing examples, each fetched and
+  field-checked live today: HN via Algolia (enveloped array), Lobsters `hottest.json`
+  (root array), GitHub repo search (text mode), Dev.to (int guid). Parse re-verified,
+  5 active feeds intact.
+- **Tests.** 82 → 84 (expander default-collapsed regression + SHORTCUTS drift guard);
+  full suite green after every commit.

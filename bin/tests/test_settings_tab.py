@@ -1,10 +1,11 @@
 """Tests for the Settings screen (brain-feed-gui.py).
 
-Covers the two things it owns:
+Covers the three things it owns:
   * the feeder's global daily cap — Save rewrites `default_cap` in feeds.toml in
     place (comments and feed blocks untouched);
   * appearance prefs — a change re-themes live and persists to .brain/gui-prefs.json,
-    and a saved pref is loaded back on the next launch.
+    and a saved pref is loaded back on the next launch;
+  * the SHORTCUTS reference card — rendered from the same table _bind_keys binds from.
 
 Headless Tk, temp vault, no network, no LLM (ADR-0001).
 
@@ -117,6 +118,26 @@ class SettingsTab(unittest.TestCase):
                              ("amber", "comfortable", "calm"))
         finally:
             root2.destroy()
+
+    def _label_texts(self, w):
+        out = []
+        for c in w.winfo_children():
+            if isinstance(c, gui.tk.Label):
+                out.append(c.cget("text"))
+            out.extend(self._label_texts(c))
+        return out
+
+    def test_shortcuts_card_matches_the_bindings(self):
+        """SHORTCUTS is the single source of truth: every row must be both bound
+        globally and listed (keycap + description) on the Settings card."""
+        texts = self._label_texts(self.app.card.inner)
+        self.assertIn("SHORTCUTS", texts)
+        for cap, seqs, desc, _act in gui.ReviewApp.SHORTCUTS:
+            for seq in seqs:
+                self.assertTrue(self.root.bind_class("all", seq),
+                                f"{seq} is not bound")
+            self.assertIn(cap, texts)
+            self.assertIn(desc, texts)
 
 
 if __name__ == "__main__":

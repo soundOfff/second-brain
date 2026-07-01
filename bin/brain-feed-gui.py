@@ -645,34 +645,44 @@ class ReviewApp:
         return t
 
     # -- key bindings ----------------------------------------------------------
+    # Single source of truth for the global shortcuts: each row is (keycap label,
+    # Tk event sequences, description, action). _bind_keys binds from this table
+    # and the Settings SHORTCUTS card renders it, so the two can't drift.
+    SHORTCUTS = [
+        ("k / ⏎", ("<k>", "<Return>"), "keep — place the item into sources/",
+         lambda a: a.do_keep()),
+        ("d", ("<d>",), "drop the queued candidate", lambda a: a.do_drop()),
+        ("→", ("<Right>",), "skip — leave it queued, advance", lambda a: a.do_skip()),
+        ("o", ("<o>",), "open the source url", lambda a: a.open_url()),
+        ("u", ("<u>",), "undo the last keep / drop", lambda a: a.do_undo()),
+        ("⇧r", ("<R>",), "rescan the queue from disk", lambda a: a.do_rescan()),
+        ("g", ("<g>",), "toggle recap / outline", lambda a: a.toggle_view()),
+        ("↓", ("<Down>",), "select the next queued item", lambda a: a.move(1)),
+        ("↑", ("<Up>",), "select the previous queued item", lambda a: a.move(-1)),
+        ("r", ("<r>",), "go to Review Queue", lambda a: a.set_screen("review")),
+        ("f", ("<f>",), "go to Feed Stats", lambda a: a.set_screen("stats")),
+        ("s", ("<s>",), "go to Settings", lambda a: a.set_screen("settings")),
+        ("t", ("<t>",), "toggle review ↔ stats", lambda a: a.toggle_screen()),
+        ("q", ("<q>",), "quit", lambda a: a._on_close()),
+    ]
+
     def _bind_keys(self) -> None:
         b = self.root.bind_all
 
-        def key(fn):
+        def key(act):
             # Global single-key shortcuts must not fire while the user is typing in a
             # form field, or "type", "quit", etc. would trigger mid-word. Let the
             # widget's own class binding handle the keystroke and no-op the shortcut.
             def handler(e):
                 if self._typing():
                     return
-                fn()
+                act(self)
             return handler
 
-        b("<k>", key(self.do_keep))
-        b("<Return>", key(self.do_keep))
-        b("<d>", key(self.do_drop))
-        b("<Right>", key(self.do_skip))
-        b("<o>", key(self.open_url))
-        b("<u>", key(self.do_undo))
-        b("<R>", key(self.do_rescan))
-        b("<g>", key(self.toggle_view))
-        b("<r>", key(lambda: self.set_screen("review")))
-        b("<f>", key(lambda: self.set_screen("stats")))
-        b("<s>", key(lambda: self.set_screen("settings")))
-        b("<t>", key(self.toggle_screen))
-        b("<q>", key(self._on_close))
-        b("<Down>", key(lambda: self.move(1)))
-        b("<Up>", key(lambda: self.move(-1)))
+        for _cap, seqs, _desc, act in self.SHORTCUTS:
+            handler = key(act)
+            for seq in seqs:
+                b(seq, handler)
 
     def _typing(self) -> bool:
         """True when keyboard focus is in a text-input widget, so global shortcuts
@@ -2205,6 +2215,30 @@ class ReviewApp:
                      anchor="w").pack(side="left")
             self._segmented(row, options, current,
                             lambda v, k=key: self._set_pref(k, v)).pack(side="left")
+
+        # -- shortcuts (read-only reference, rendered from SHORTCUTS) ------------
+        card3 = tk.Frame(pad, bg=BASE["raise"], highlightthickness=1,
+                         highlightbackground=BASE["border"])
+        card3.pack(fill="x", pady=(22, 0))
+        inner3 = tk.Frame(card3, bg=BASE["raise"])
+        inner3.pack(fill="x", padx=18, pady=16)
+        tk.Label(inner3, text="SHORTCUTS", bg=BASE["raise"], fg=BASE["ink_faint"],
+                 font=self.font("mono", 10, "bold")).pack(anchor="w")
+        tk.Label(inner3, text="global · inert while typing in a form field",
+                 bg=BASE["raise"], fg=BASE["ink_fainter"],
+                 font=self.font("mono", 9)).pack(anchor="w", pady=(2, 8))
+        grid = tk.Frame(inner3, bg=BASE["raise"])
+        grid.pack(fill="x")
+        half = (len(self.SHORTCUTS) + 1) // 2       # two columns of keycap+description
+        for i, (cap, _seqs, desc, _act) in enumerate(self.SHORTCUTS):
+            r, c0 = i % half, (i // half) * 2
+            tk.Label(grid, text=cap, bg=t["kbd_bg"], fg=t["ac"],
+                     font=self.font("mono", 10, "bold"), padx=6, pady=1,
+                     highlightthickness=1, highlightbackground=t["kbd_bd"]
+                     ).grid(row=r, column=c0, sticky="w", padx=(0, 10), pady=3)
+            tk.Label(grid, text=desc, bg=BASE["raise"], fg=BASE["ink_dim"],
+                     font=self.font("ui", 12), anchor="w"
+                     ).grid(row=r, column=c0 + 1, sticky="w", padx=(0, 28), pady=3)
 
     def _settings_set_status(self, msg, err=False):
         try:
