@@ -12,10 +12,11 @@ collision-safe naming) is reused from there, so behaviour stays single-source:
 
   Keep  (k / ⏎)   place the item into sources/  (collision-safe via brain-feed.place)
   Drop  (d)       delete the queued candidate   (the pen is gitignored scratch)
-  Skip  (s / →)   leave it queued, just advance  (non-destructive)
+  Skip  (→)       leave it queued, just advance  (non-destructive)
   Undo  (u)       reverse the last Keep or Drop (single level)
-  Open  (o)       open the source url            Rescan (r)   reload the queue from disk
+  Open  (o)       open the source url            Rescan (⇧R)  reload the queue from disk
   ↑/↓             move selection                 g            toggle Recap / Outline
+  r / f / s       jump to Review Queue / Feed Stats / Settings screens
   click select    ·    drag to reorder (session) ·    q       quit
 
 A top tab bar switches between the Review Queue, a **Feed Stats** screen (t), and a
@@ -659,12 +660,14 @@ class ReviewApp:
         b("<k>", key(self.do_keep))
         b("<Return>", key(self.do_keep))
         b("<d>", key(self.do_drop))
-        b("<s>", key(self.do_skip))
         b("<Right>", key(self.do_skip))
         b("<o>", key(self.open_url))
         b("<u>", key(self.do_undo))
-        b("<r>", key(self.do_rescan))
+        b("<R>", key(self.do_rescan))
         b("<g>", key(self.toggle_view))
+        b("<r>", key(lambda: self.set_screen("review")))
+        b("<f>", key(lambda: self.set_screen("stats")))
+        b("<s>", key(lambda: self.set_screen("settings")))
         b("<t>", key(self.toggle_screen))
         b("<q>", key(self._on_close))
         b("<Down>", key(lambda: self.move(1)))
@@ -730,9 +733,9 @@ class ReviewApp:
         seg = tk.Frame(bar, bg=BASE["raise"], highlightthickness=1,
                        highlightbackground=BASE["border"])
         seg.pack(side="left", padx=t["head_padx"], pady=6)
-        self._screen_tab(seg, "Review Queue", "review")
-        self._screen_tab(seg, "Feed Stats  t", "stats")
-        self._screen_tab(seg, "Settings", "settings")
+        self._screen_tab(seg, "Review Queue  r", "review")
+        self._screen_tab(seg, "Feed Stats  f", "stats")
+        self._screen_tab(seg, "Settings  s", "settings")
 
     def _screen_tab(self, parent, label, value):
         t = self.t
@@ -803,7 +806,7 @@ class ReviewApp:
         nfeeds = self._feed_count()
         tk.Label(frow, text=f"feeds: {nfeeds} active", bg=BASE["panel"], fg=BASE["ink_faint"],
                  font=self.font("mono", 10)).pack(side="left")
-        self._action_button(frow, "Rescan", "r", "outline", self.do_rescan).pack(side="right")
+        self._action_button(frow, "Rescan", "⇧r", "outline", self.do_rescan).pack(side="right")
 
     def _feed_count(self) -> int:
         try:
@@ -1452,7 +1455,7 @@ class ReviewApp:
                             enabled=has, width_mult=2).pack(side="left")
         tk.Frame(row, bg=BASE["border"], width=1, height=22).pack(side="left", padx=8)
         self._action_button(row, "Drop", "d", "drop", self.do_drop, enabled=has).pack(side="left", padx=(0, self.t["gap"]))
-        self._action_button(row, "Skip", "s", "outline", self.do_skip, enabled=has).pack(side="left", padx=(0, self.t["gap"]))
+        self._action_button(row, "Skip", "→", "outline", self.do_skip, enabled=has).pack(side="left", padx=(0, self.t["gap"]))
         self._action_button(row, "Open URL", "o", "outline", self.open_url, enabled=has).pack(side="left")
         # undo far right
         self._action_button(row, "Undo", "u", "outline", self.do_undo,
@@ -1472,7 +1475,7 @@ class ReviewApp:
         tk.Label(wrap, text="Everything kept is now in sources/ and will be folded in on the "
                  "next nightly /sync.", bg=BASE["bg"], fg=BASE["ink_dim"],
                  font=self.font("ui", 13), wraplength=360, justify="center").pack(pady=(8, 0))
-        self._ghost_button(wrap, "Rescan feeds", "r", self.do_rescan).pack(pady=(14, 0))
+        self._ghost_button(wrap, "Rescan feeds", "⇧r", self.do_rescan).pack(pady=(14, 0))
 
     # ======================================================================
     # Actions (real triage logic, preserved from the CLI/ttk version).
