@@ -21,9 +21,23 @@ cd "$VAULT" || { echo "[$ts] ERROR: cannot cd to $VAULT" >>"$LOG"; exit 1; }
   echo "[$ts] RUN: $PROMPT"
 } >>"$LOG"
 
-claude -p "$PROMPT" \
-  --permission-mode bypassPermissions \
-  >>"$LOG" 2>&1
+# Resolve the model for this unattended run: an explicit BRAIN_MODEL env var wins;
+# otherwise the `model` key in .brain/config.json (set from the GUI Settings screen).
+# Empty => pass no --model, so `claude` falls back to the user's own default.
+MODEL="${BRAIN_MODEL:-}"
+if [[ -z "$MODEL" && -f "$VAULT/.brain/config.json" ]]; then
+  MODEL="$(python3 -c 'import json,sys
+try: print((json.load(open(sys.argv[1])).get("model") or "").strip())
+except Exception: pass' "$VAULT/.brain/config.json" 2>/dev/null)"
+fi
+
+cmd=(claude -p "$PROMPT" --permission-mode bypassPermissions)
+if [[ -n "$MODEL" ]]; then
+  cmd+=(--model "$MODEL")
+  echo "[$ts] MODEL: $MODEL" >>"$LOG"
+fi
+
+"${cmd[@]}" >>"$LOG" 2>&1
 status=$?
 
 echo "[$(date "+%Y-%m-%d %H:%M:%S")] EXIT $status" >>"$LOG"

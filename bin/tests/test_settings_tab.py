@@ -1,8 +1,10 @@
 """Tests for the Settings screen (brain-feed-gui.py).
 
-Covers the three things it owns:
+Covers the four things it owns:
   * the feeder's global daily cap — Save rewrites `default_cap` in feeds.toml in
     place (comments and feed blocks untouched);
+  * the Claude model for the unattended agents — Save writes/clears `model` in
+    .brain/config.json (merging, not clobbering; read by bin/brain-run.sh);
   * appearance prefs — a change re-themes live and persists to .brain/gui-prefs.json,
     and a saved pref is loaded back on the next launch;
   * the SHORTCUTS reference card — rendered from the same table _bind_keys binds from.
@@ -118,6 +120,56 @@ class SettingsTab(unittest.TestCase):
                              ("amber", "comfortable", "calm"))
         finally:
             root2.destroy()
+
+    # -- Claude model (for the unattended sync/digest/capture agents) ----------
+    def _config_json(self):
+        return self.vault / ".brain" / "config.json"
+
+    def test_model_entry_prefilled_from_config(self):
+        self._config_json().write_text(
+            json.dumps({"model": "claude-opus-4-8"}), encoding="utf-8")
+        root2 = gui.tk.Tk()
+        root2.withdraw()
+        try:
+            app2 = gui.ReviewApp(root2, demo=True)
+            app2.set_screen("settings")
+            self.assertEqual(app2._model_entry.get(), "claude-opus-4-8")
+        finally:
+            root2.destroy()
+
+    def test_save_model_writes_config(self):
+        self.app._model_entry.delete(0, "end")
+        self.app._model_entry.insert(0, "sonnet")
+        self.app._save_model()
+        saved = json.loads(self._config_json().read_text())
+        self.assertEqual(saved["model"], "sonnet")
+        self.assertEqual(self.app.model, "sonnet")
+        self.assertIn("Saved", self.app._model_status.cget("text"))
+
+    def test_empty_model_clears_the_override(self):
+        self._config_json().write_text(json.dumps({"model": "opus"}), encoding="utf-8")
+        self.app._model_entry.delete(0, "end")                 # leave it blank
+        self.app._save_model()
+        self.assertEqual(json.loads(self._config_json().read_text())["model"], "")
+        self.assertEqual(self.app.model, "")
+        self.assertIn("Cleared", self.app._model_status.cget("text"))
+
+    def test_model_with_spaces_is_rejected(self):
+        self.app._model_entry.delete(0, "end")
+        self.app._model_entry.insert(0, "the best one please")
+        self.app._save_model()
+        self.assertFalse(self._config_json().exists())         # nothing written
+        self.assertIn("single alias", self.app._model_status.cget("text"))
+
+    def test_save_model_preserves_other_config_keys(self):
+        self._config_json().write_text(
+            json.dumps({"model": "opus", "future_key": 7}), encoding="utf-8")
+        self.app._model_entry.delete(0, "end")
+        self.app._model_entry.insert(0, "haiku")
+        self.app._save_model()
+        saved = json.loads(self._config_json().read_text())
+        self.assertEqual(saved["model"], "haiku")
+        self.assertEqual(saved["future_key"], 7)               # merge, not clobber
 
     def _label_texts(self, w):
         out = []

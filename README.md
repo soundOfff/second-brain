@@ -69,12 +69,17 @@ Deterministic helpers — no LLM, no tokens — that surround the agent:
   --fix` applies the safe fixes. `… --install-hook` adds a pre-commit guard so broken
   pages can't be committed.
 - **Capture from anywhere (push)** — `bin/brain-clip.sh <url | file | text>` lands raw
-  material into `sources/` with valid frontmatter; `bin/brain-clip-watch.sh` ingests
-  anything dropped into a watched inbox folder. A YouTube/Vimeo URL is recognized and
+  material into `sources/` with valid frontmatter. A YouTube/Vimeo URL is recognized and
   deposited as its **captions transcript** (`type: transcript`) via `yt-dlp` instead of
   the useless player-page HTML — so any path that hands the clipper a URL (the watch
   folder, the `list` feed, a share-sheet) can capture a video by link. Without `yt-dlp`
-  installed it warns and falls back to page extraction.
+  installed it warns and falls back to page extraction. `bin/brain-clip-gui.sh install`
+  deploys four more surfaces on top of the CLI: a double-clickable **Clip to Brain.app**,
+  a watched **inbox folder** (`~/Brain Inbox`, ingested on drop by
+  `bin/brain-clip-watch.sh`), a right-click **Services → Clip to Brain** Quick Action,
+  and a **Chrome toolbar button** (posts the current tab to a localhost helper; on a
+  video tab it relabels to "Clip transcript"). All of them end at the same clipper, so
+  everything lands contract-valid.
 - **Subscribe to feeds (pull)** — `bin/brain-feed.sh run` polls the feeds in `feeds.toml`
   through five adapters — RSS/Atom, a to-read list, YouTube, an email label, and **`api`**
   (any public JSON HTTP endpoint, mapped to items by a declarative block in `feeds.toml`:
@@ -87,6 +92,26 @@ Deterministic helpers — no LLM, no tokens — that surround the agent:
   author the mapping once in a Claude session from a sample response and validate it with
   `bin/brain-feed.sh run --dry-run --feed <id>` — the unattended feeder never calls a model
   (`docs/adr/0002`).
+- **Triage in a window** — `bin/brain-feed-gui.sh` opens a native macOS (Tkinter)
+  desktop app over the same feeder, with three screens on a tab bar (`r` / `f` / `s`):
+  - **Review Queue** — the `brain-feed review` triage as a window: the queue on the
+    left (drag to reorder), the selected item's recap or outline on the right (`g`
+    toggles), and Keep (`k`/⏎ → `sources/`) / Drop (`d`) / Skip (`→`) / Open (`o`) /
+    Undo (`u`) as an action bar.
+  - **Feed Stats** — a **Run feeder now** button that fires `brain-feed run` in the
+    background (the same pull the 01:30 agent does) and reports the run's summary,
+    above a read-only per-feed table (seen / today / queued / keep-rate), plus a
+    **New source** form: *webpage* clips a URL or note straight into `sources/`,
+    while *rss/api* appends a subscription block to `feeds.toml` (trust, cap, tags, and
+    the declarative mapping fields for `api`) for the next feeder run.
+  - **Settings** — the feeder's global daily cap (written back into `feeds.toml`),
+    appearance options (persisted to gitignored `.brain/gui-prefs.json`), and a
+    shortcuts reference card.
+
+  It's a thin shell over `brain-feed.py` — keep/drop placement and feed subscription
+  reuse the CLI's logic verbatim, so behaviour stays single-source, and like the CLI it
+  does no synthesis: kept items wait for the nightly `/sync`. `--demo` seeds three
+  showcase items with no filesystem writes. Needs Tk (`brew install python-tk@3.14`).
 - **Read the wiki in a browser** — `bin/brain-serve.sh [port]` renders `wiki/` and
   `index.md` read-only, resolving wikilinks, citations, and backlinks, and surfacing
   stubs and dangling links.

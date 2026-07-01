@@ -220,6 +220,9 @@ class FeedSubscribe(unittest.TestCase):
         self.app._ns_set_kind("rss")
         self.assertTrue(self.app._ns_id.winfo_exists())        # rss: feed id + cap
         self.assertEqual(self.app._ns_map, {})                 # …but no mapping
+        self.app._ns_set_kind("yt")
+        self.assertTrue(self.app._ns_id.winfo_exists())        # yt: feed id + cap too
+        self.assertEqual(self.app._ns_map, {})                 # …and no mapping
         self.app._ns_set_kind("api")
         self.assertIn("items_path", self.app._ns_map)          # api: mapping fields
 
@@ -293,6 +296,66 @@ class FeedSubscribe(unittest.TestCase):
         self.assertEqual(new["guid_field"], "data.id")
         self.assertEqual(new["user_agent"], "brain-feed/1.0")
         self.assertNotIn("mode", new)                          # url mode stays implicit
+
+    def test_yt_subscribe_appends_a_yt_feed(self):
+        self.app._ns_set_kind("yt")
+        self.app._ns_title.insert(0, "Lex Fridman")
+        self.app._ns_url.insert(
+            0, "https://www.youtube.com/feeds/videos.xml?channel_id=UCSHZKyawb77ixDdsGog4iWA")
+        self.app._ns_tags.insert(0, "video")
+        self.app._submit_new_source()
+
+        new = self._feeds()[1]
+        self.assertEqual(new["id"], "lex-fridman")             # derived from the title
+        self.assertEqual(new["adapter"], "yt")                 # routed to the yt adapter
+        self.assertEqual(new["trust"], "queue")
+        self.assertEqual(new["tags"], ["video"])
+        self.assertNotIn("mode", new)                          # yt carries no api mapping
+
+    def test_yt_channel_url_is_normalized_to_the_rss_feed(self):
+        self.app._ns_set_kind("yt")
+        self.app._ns_url.insert(
+            0, "https://www.youtube.com/channel/UCSHZKyawb77ixDdsGog4iWA")
+        self.app._submit_new_source()
+
+        new = self._feeds()[1]
+        self.assertEqual(
+            new["url"],
+            "https://www.youtube.com/feeds/videos.xml?channel_id=UCSHZKyawb77ixDdsGog4iWA")
+        self.assertEqual(new["id"], "yt-ucshzkyawb77ixddsgog4iwa")   # id from the channel
+
+
+class YoutubeFeedURL(unittest.TestCase):
+    """youtube_feed_url() — the offline normalizer that turns what a user pastes into
+    the channel's RSS feed URL the yt adapter fetches. Pure string work, no network."""
+
+    FEED = "https://www.youtube.com/feeds/videos.xml"
+
+    def test_already_a_feed_url_passes_through(self):
+        u = f"{self.FEED}?channel_id=UCSHZKyawb77ixDdsGog4iWA"
+        self.assertEqual(gui.youtube_feed_url(u), u)
+
+    def test_channel_page_url_becomes_a_feed_url(self):
+        self.assertEqual(
+            gui.youtube_feed_url("https://www.youtube.com/channel/UCSHZKyawb77ixDdsGog4iWA"),
+            f"{self.FEED}?channel_id=UCSHZKyawb77ixDdsGog4iWA")
+
+    def test_bare_channel_id_becomes_a_feed_url(self):
+        self.assertEqual(gui.youtube_feed_url("UCSHZKyawb77ixDdsGog4iWA"),
+                         f"{self.FEED}?channel_id=UCSHZKyawb77ixDdsGog4iWA")
+
+    def test_playlist_url_becomes_a_playlist_feed(self):
+        self.assertEqual(
+            gui.youtube_feed_url("https://www.youtube.com/playlist?list=PLabc123def456"),
+            f"{self.FEED}?playlist_id=PLabc123def456")
+
+    def test_a_handle_url_is_left_untouched(self):
+        # An @handle's channel_id needs a network lookup we don't do here.
+        u = "https://www.youtube.com/@lexfridman"
+        self.assertEqual(gui.youtube_feed_url(u), u)
+
+    def test_empty_stays_empty(self):
+        self.assertEqual(gui.youtube_feed_url(""), "")
 
 
 if __name__ == "__main__":

@@ -128,7 +128,12 @@ get folded into the wiki without anyone at the keyboard:
 - **Mondays 09:00** — `bin/brain-digest.sh` runs `/digest` (weekly synthesis).
 
 Both call `bin/brain-run.sh`, which invokes `claude -p … --permission-mode
-bypassPermissions` and appends every run to `.brain/cron.log` (gitignored). The agent
+bypassPermissions` and appends every run to `.brain/cron.log` (gitignored). The **model**
+those unattended runs use is configurable: `brain-run.sh` reads a `model` key from
+`.brain/config.json` (gitignored) — settable from the feed GUI's **Settings** screen or by
+hand — and passes it as `--model`; the `BRAIN_MODEL` env var overrides the file, and an
+empty/absent value falls back to `claude`'s own default. This affects only the headless
+sync/digest/capture agents, never interactive sessions. The agent
 plists live in `bin/launchd/` (version-controlled, single source of truth) and are
 symlinked into `~/Library/LaunchAgents/`. Manage them with:
 

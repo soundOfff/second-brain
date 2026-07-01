@@ -20,8 +20,11 @@ collision-safe naming) is reused from there, so behaviour stays single-source:
   click select    ·    drag to reorder (session) ·    q       quit
 
 A top tab bar switches between the Review Queue, a **Feed Stats** screen (t), and a
-**Settings** screen. Feed Stats holds a read-only per-feed table (seen / today / queued /
-keep-rate) plus a **New source** form with a type selector:
+**Settings** screen. Feed Stats is the feeder's cockpit: a **Run feeder now** button
+fires `brain-feed run` in a background thread (the same once-a-day pull the 01:30 agent
+does; demo mode never runs it) and reports the run's one-line summary, above a read-only
+per-feed table (seen / today / queued / keep-rate) plus a **New source** form with a
+type selector:
 
   webpage   deposit one source straight into sources/ — clip a URL or jot a note —
             reusing the same brain-clip render + place path the feeder uses, so it's
@@ -31,9 +34,10 @@ keep-rate) plus a **New source** form with a type selector:
             the next feeder run pulls it.
 
 Settings edits the feeder's global daily cap (default_cap, written back into feeds.toml
-in place) and the appearance options (accent / density / intensity), persisted to
-.brain/gui-prefs.json (gitignored). Global one-key shortcuts yield to normal typing
-while a form field has focus.
+in place), the Claude model the unattended sync/digest/capture agents run as (written to
+.brain/config.json, read by bin/brain-run.sh; empty = your own `claude` default), and the
+appearance options (accent / density / intensity), persisted to .brain/gui-prefs.json
+(gitignored). Global one-key shortcuts yield to normal typing while a form field has focus.
 
 Theme defaults — amber accent · comfortable density · calm intensity. No synthesis
 happens here (same as the CLI): kept items wait for the 02:00 /sync.
@@ -170,6 +174,31 @@ def inject_tags(content: str, tags: list[str]) -> str:
     return out + "\n" if content.endswith("\n") else out
 
 
+def youtube_feed_url(url: str) -> str:
+    """Normalize what a user pastes for a YouTube channel into the RSS feed URL the
+    `yt` adapter fetches: https://www.youtube.com/feeds/videos.xml?channel_id=<ID>.
+
+    Pure string rewriting — no network, so subscribing stays a config edit. Handles the
+    cases we can resolve offline; anything else (an @handle, /c/, or /user/ path, whose
+    channel_id needs a lookup) is returned unchanged for the feeder to fetch as-is."""
+    url = (url or "").strip()
+    if not url or "feeds/videos.xml" in url:      # already the RSS feed URL
+        return url
+    feed = "https://www.youtube.com/feeds/videos.xml"
+    # A bare id pasted on its own: UC… (channel) or PL…/UU…/OL… (playlist).
+    if re.fullmatch(r"UC[\w-]{22}", url):
+        return f"{feed}?channel_id={url}"
+    if re.fullmatch(r"(?:PL|UU|OL|LL|FL)[\w-]{10,}", url):
+        return f"{feed}?playlist_id={url}"
+    m = re.search(r"youtube\.com/channel/(UC[\w-]{22})", url)
+    if m:
+        return f"{feed}?channel_id={m.group(1)}"
+    q = urllib.parse.parse_qs(urllib.parse.urlsplit(url).query)
+    if q.get("list"):                             # a /playlist?list=… or watch?list=… URL
+        return f"{feed}?playlist_id={q['list'][0]}"
+    return url                                     # @handle / /c/ / /user/ — leave as typed
+
+
 def prefs_path() -> Path:
     """Appearance prefs live in the gitignored .brain/ — looked up lazily so tests
     that redirect VAULT never touch the real vault."""
@@ -192,6 +221,34 @@ def save_prefs(prefs: dict) -> None:
         p.write_text(json.dumps(prefs, indent=2) + "\n", encoding="utf-8")
     except OSError:
         pass
+
+
+def brain_config_path() -> Path:
+    """Brain runtime config — currently just the Claude model the unattended
+    sync/digest/capture agents run as. Lives in the gitignored .brain/config.json,
+    written here and read by bin/brain-run.sh at each headless run. Deliberately
+    separate from gui-prefs.json (appearance) and feeds.toml (feeder): the model is
+    neither the look of this window nor a feed — it is what `claude -p` runs as."""
+    return VAULT / ".brain" / "config.json"
+
+
+def load_brain_config() -> dict:
+    try:
+        d = json.loads(brain_config_path().read_text(encoding="utf-8"))
+        return d if isinstance(d, dict) else {}
+    except (OSError, ValueError):
+        return {}
+
+
+def save_brain_config(updates: dict) -> None:
+    """Merge `updates` into .brain/config.json, preserving any unrelated keys, and
+    write it back. Raises OSError if the file can't be written — unlike appearance
+    prefs this is an explicit Save, so the caller surfaces the failure."""
+    cfg = load_brain_config()
+    cfg.update(updates)
+    p = brain_config_path()
+    p.parent.mkdir(parents=True, exist_ok=True)
+    p.write_text(json.dumps(cfg, indent=2) + "\n", encoding="utf-8")
 
 
 def rel_time(epoch: float) -> str:
@@ -588,6 +645,10 @@ class ReviewApp:
                         if prefs.get("density") in DENSITY else "comfortable")
         self.intensity = (prefs.get("intensity")
                           if prefs.get("intensity") in ("calm", "vivid") else "calm")
+        # the model the unattended agents run as (bin/brain-run.sh reads it from
+        # .brain/config.json); "" = fall back to the user's own `claude` default.
+        m = load_brain_config().get("model", "")
+        self.model = m.strip() if isinstance(m, str) else ""
 
         self.items: list[Item] = []
         self.sel = 0
@@ -601,7 +662,10 @@ class ReviewApp:
         self._db = None                   # cached sqlite connection (lazy)
         self._stats_cache: list[dict] | None = None
         self._creating = False            # new-source deposit in flight (form guard)
-        self._ns_kind = "webpage"         # new-source type: webpage | rss | api
+        self._feed_running = False        # a `brain-feed run` subprocess in flight
+        self._feedrun_msg = ""            # last run's one-line summary (or error)
+        self._feedrun_err = False
+        self._ns_kind = "webpage"         # new-source type: webpage | rss | yt | api
         self._ns_trust = "queue"          # feed trust for rss/api subscriptions
         self._ns_mode = "url"             # api mapping mode: url | text
         self._ns_expanded = False         # form starts collapsed behind "+ Add source"
@@ -1717,16 +1781,100 @@ class ReviewApp:
         except Exception:
             self._stats_cache = []
 
+    # -- run the feeder from the GUI --------------------------------------------
+    def run_feeder(self):
+        """Fire one `brain-feed run` now — the same pull the 01:30 agent does. Runs as
+        a subprocess off the Tk thread (adapters hit the network); the finish handler
+        refreshes the table so the numbers below reflect the run just made."""
+        if self.demo:
+            self.flash("Demo mode — the feeder is not run")
+            return
+        if self._feed_running:
+            self.flash("Feeder already running…")
+            return
+        self._feed_running = True
+        self._set_feedrun_msg("running… network fetches can take a while")
+        threading.Thread(target=self._run_feeder_worker, daemon=True).start()
+
+    def _run_feeder_worker(self):
+        try:
+            proc = subprocess.run([sys.executable, str(_FEED_PY), "run"],
+                                  capture_output=True, text=True, timeout=900)
+        except Exception as e:                     # timeout / spawn failure
+            err = str(e)
+            self.root.after(0, lambda: self._finish_feed_run(None, err))
+            return
+        out = proc.stdout or ""
+        if proc.returncode != 0:
+            tail = ((proc.stderr or out).strip().splitlines()[-1:] or ["run failed"])[0]
+            self.root.after(0, lambda: self._finish_feed_run(None, tail))
+            return
+        summary = self._parse_run_summary(out)
+        self.root.after(0, lambda: self._finish_feed_run(summary, None))
+
+    @staticmethod
+    def _parse_run_summary(out: str) -> str:
+        """One line for the status label: the run's closing "done: X deposited,
+        Y queued" log line, or the last line (e.g. "no feeds configured …"),
+        with the "[date] " log prefix stripped."""
+        lines = [l for l in out.splitlines() if l.strip()]
+        summary = next((l for l in reversed(lines) if "done:" in l),
+                       lines[-1] if lines else "done")
+        return re.sub(r"^\[[^\]]*\]\s*", "", summary)
+
+    def _finish_feed_run(self, summary, err):
+        self._feed_running = False
+        if err:
+            self._set_feedrun_msg(f"failed: {err[:110]}", err=True)
+            self.flash("Feeder run failed")
+            return
+        self._feedrun_msg, self._feedrun_err = summary, False
+        self.refresh_stats()
+        # Re-render only when it can't clobber anything: the add-source form loses
+        # typed values on a rebuild, so an open form just gets the label update.
+        if self.screen == "stats" and not self._ns_expanded and not self._typing():
+            self.render_main()
+        else:
+            self._set_feedrun_msg(summary)
+        q = re.search(r"(\d+) queued", summary)
+        hint = (" — ⇧R rescans the queue"
+                if self.screen == "review" and q and int(q.group(1)) else "")
+        self.flash(f"Feeder {summary}{hint}")
+
+    def _set_feedrun_msg(self, msg, err=False):
+        self._feedrun_msg, self._feedrun_err = msg, err
+        lab = getattr(self, "_feedrun_label", None)
+        if lab is None:
+            return
+        try:
+            lab.configure(text=msg, fg=(BASE["drop_ink"] if err else BASE["ink_faint"]))
+        except tk.TclError:
+            pass                                  # stats pane was torn down meanwhile
+
     def _render_stats(self):
         t = self.t
-        # header
+        # header — title on the left; the Run feeder trigger on the right, so the
+        # table below is always one click away from being fresh.
         hpad = tk.Frame(self.head, bg=BASE["bg"])
         hpad.pack(fill="x", padx=t["head_padx"], pady=(t["head_pady"], t["head_pady"] - 6))
-        tk.Label(hpad, text="Feed Stats", bg=BASE["bg"], fg=BASE["ink_bright"],
+        left = tk.Frame(hpad, bg=BASE["bg"])
+        left.pack(side="left", anchor="w")
+        tk.Label(left, text="Feed Stats", bg=BASE["bg"], fg=BASE["ink_bright"],
                  font=self.font("ui", t["title"], "bold")).pack(anchor="w")
-        tk.Label(hpad, text="all feeds · keep-rate tracked going forward",
+        tk.Label(left, text="all feeds · keep-rate tracked going forward",
                  bg=BASE["bg"], fg=BASE["ink_faint"],
                  font=self.font("mono", 10)).pack(anchor="w", pady=(4, 0))
+        right = tk.Frame(hpad, bg=BASE["bg"])
+        right.pack(side="right", anchor="n")
+        self._simple_button(right, "Run feeder now", self.run_feeder,
+                            canvas_bg=BASE["bg"]).pack(anchor="e")
+        status = ("running… network fetches can take a while" if self._feed_running
+                  else self._feedrun_msg or "pulls every feed once — same as the 01:30 agent")
+        self._feedrun_label = tk.Label(
+            right, text=status, bg=BASE["bg"],
+            fg=(BASE["drop_ink"] if self._feedrun_err else BASE["ink_faint"]),
+            font=self.font("mono", 9))
+        self._feedrun_label.pack(anchor="e", pady=(4, 0))
 
         pad = tk.Frame(self.card.inner, bg=BASE["bg"])
         # Bottom-only inset: the header block above the hairline already provides the
@@ -1810,12 +1958,17 @@ class ReviewApp:
                    "folds it into the wiki.",
         "rss": "Subscribe to an RSS/Atom feed — appends a [[feed]] to feeds.toml; the "
                "daily feeder pulls new items from the next run.",
+        "yt": "Subscribe to a YouTube channel — appends a [[feed]] to feeds.toml; the "
+              "feeder pulls each new video (transcript if yt-dlp is installed, else the "
+              "summary).",
         "api": "Subscribe to a public JSON endpoint via a declarative mapping — appends "
                "a [[feed]] to feeds.toml; the daily feeder pulls new items.",
     }
     _NS_URL_HINT = {
         "webpage": "a web page to fetch, or a link to attach",
         "rss": "the RSS/Atom feed URL",
+        "yt": "a channel URL or its RSS feed (youtube.com/feeds/videos.xml?channel_id=…) "
+              "— a /channel/UC… or playlist URL is converted for you",
         "api": "the JSON endpoint URL (public, no auth)",
     }
 
@@ -1837,7 +1990,8 @@ class ReviewApp:
         head.pack(fill="x")
         tk.Label(head, text="NEW SOURCE", bg=BASE["raise"], fg=BASE["ink_faint"],
                  font=self.font("mono", 10, "bold")).pack(side="left")
-        self._segmented(head, [("webpage", "webpage"), ("rss", "rss"), ("api", "api")],
+        self._segmented(head, [("webpage", "webpage"), ("rss", "rss"),
+                               ("youtube", "yt"), ("api", "api")],
                         kind, self._ns_set_kind).pack(side="right")
         hide = tk.Label(head, text="hide ✕", bg=BASE["raise"], fg=BASE["ink_faint"],
                         font=self.font("mono", 9, "bold"), cursor="hand2")
@@ -1857,7 +2011,7 @@ class ReviewApp:
                                         vals.get("url", ""))
         self._ns_tags = self._form_entry(inner, "Tags", tags_hint, vals.get("tags", ""))
 
-        if kind in ("rss", "api"):
+        if kind in ("rss", "yt", "api"):
             self._ns_id = self._form_entry(
                 inner, "Feed id",
                 "optional — derived from title/URL; must be unique in feeds.toml",
@@ -2080,7 +2234,7 @@ class ReviewApp:
     def _submit_new_source(self):
         if getattr(self, "_creating", False):
             return
-        if self._ns_kind in ("rss", "api"):
+        if self._ns_kind in ("rss", "yt", "api"):
             self._submit_new_feed(self._ns_kind)
             return
         title = self._ns_title.get().strip()
@@ -2113,8 +2267,17 @@ class ReviewApp:
         if not url:
             self._ns_set_status("Enter the feed URL.", err=True)
             return
-        fid = fid or brain_feed.slugify(title) or brain_feed.slugify(
+        if kind == "yt":
+            url = youtube_feed_url(url)
+        # Feed id: explicit → title → a URL-derived fallback. The bare host is useless for
+        # yt (every channel is youtube.com), so fall back to the channel/playlist id there.
+        fallback = brain_feed.slugify(
             urllib.parse.urlsplit(url).netloc.removeprefix("www."))
+        if kind == "yt":
+            q = urllib.parse.parse_qs(urllib.parse.urlsplit(url).query)
+            ident = (q.get("channel_id") or q.get("playlist_id") or [""])[0]
+            fallback = ("yt-" + brain_feed.slugify(ident)) if ident else ""
+        fid = fid or brain_feed.slugify(title) or fallback
         if not fid:
             self._ns_set_status("Enter a title or a feed id.", err=True)
             return
@@ -2188,9 +2351,10 @@ class ReviewApp:
         hpad.pack(fill="x", padx=t["head_padx"], pady=(t["head_pady"], t["head_pady"] - 6))
         tk.Label(hpad, text="Settings", bg=BASE["bg"], fg=BASE["ink_bright"],
                  font=self.font("ui", t["title"], "bold")).pack(anchor="w")
-        tk.Label(hpad, text="feeder config lives in feeds.toml · appearance in "
-                 ".brain/gui-prefs.json", bg=BASE["bg"], fg=BASE["ink_faint"],
-                 font=self.font("mono", 10)).pack(anchor="w", pady=(4, 0))
+        tk.Label(hpad, text="feeds.toml (feeder) · .brain/config.json (model) · "
+                 ".brain/gui-prefs.json (appearance)", bg=BASE["bg"],
+                 fg=BASE["ink_faint"], font=self.font("mono", 10)).pack(
+                     anchor="w", pady=(4, 0))
 
         pad = tk.Frame(self.card.inner, bg=BASE["bg"])
         # Bottom-only inset: the header block above the hairline already provides the
@@ -2221,6 +2385,32 @@ class ReviewApp:
                                     wraplength=self._wrap() - 220)
         self._set_status.pack(side="left", fill="x", expand=True)
         self._simple_button(srow, "Save cap", self._save_default_cap).pack(side="right")
+
+        # -- claude: the model the unattended agents run as ---------------------
+        cardm = tk.Frame(pad, bg=BASE["raise"], highlightthickness=1,
+                         highlightbackground=BASE["border"])
+        cardm.pack(fill="x", pady=(0, 22))
+        innerm = tk.Frame(cardm, bg=BASE["raise"])
+        innerm.pack(fill="x", padx=18, pady=16)
+        tk.Label(innerm, text="CLAUDE MODEL", bg=BASE["raise"], fg=BASE["ink_faint"],
+                 font=self.font("mono", 10, "bold")).pack(anchor="w")
+        tk.Label(innerm, text="The model the unattended sync / digest / capture agents "
+                 "run as (claude -p, via bin/brain-run.sh). Leave empty to use your own "
+                 "claude default; interactive sessions are never affected.",
+                 bg=BASE["raise"], fg=BASE["ink_dim2"], font=self.font("ui", 12),
+                 justify="left", wraplength=self._wrap() - 40).pack(anchor="w", pady=(3, 4))
+        self._model_entry = self._form_entry(
+            innerm, "Model", "alias (opus · sonnet · haiku) or full id "
+            "(claude-opus-4-8) · empty = default — saved to .brain/config.json",
+            self.model)
+        mrow = tk.Frame(innerm, bg=BASE["raise"])
+        mrow.pack(fill="x", pady=(12, 0))
+        self._model_status = tk.Label(mrow, text="", bg=BASE["raise"],
+                                      fg=BASE["ink_faint"], font=self.font("mono", 10),
+                                      anchor="w", justify="left",
+                                      wraplength=self._wrap() - 220)
+        self._model_status.pack(side="left", fill="x", expand=True)
+        self._simple_button(mrow, "Save model", self._save_model).pack(side="right")
 
         # -- appearance -----------------------------------------------------------
         card2 = tk.Frame(pad, bg=BASE["raise"], highlightthickness=1,
@@ -2297,6 +2487,35 @@ class ReviewApp:
         self._settings_set_status(f"Saved — feeds without their own n now cap at "
                                   f"{cap}/day.")
         self.flash(f"default_cap = {cap} → feeds.toml")
+
+    def _model_set_status(self, msg, err=False):
+        try:
+            self._model_status.configure(
+                text=msg, fg=(BASE["drop_ink"] if err else BASE["ink_faint"]))
+        except (AttributeError, tk.TclError):
+            pass                                  # pane was torn down; nothing to update
+
+    def _save_model(self):
+        model = self._model_entry.get().strip()
+        # Empty is valid — it clears the override so the agents fall back to the user's
+        # own `claude` default. A set value must be a single bare token (a model alias
+        # or id): reject whitespace so a fat-fingered phrase can't reach `claude -p`.
+        if model and (len(model.split()) > 1 or len(model) > 80):
+            self._model_set_status("A model is a single alias or id — no spaces.",
+                                   err=True)
+            return
+        try:
+            save_brain_config({"model": model})
+        except OSError as e:                      # unwritable .brain/config.json
+            self._model_set_status(f"Failed: {e}", err=True)
+            return
+        self.model = model
+        if model:
+            self._model_set_status(f"Saved — unattended agents will run as {model}.")
+            self.flash(f"model = {model} → .brain/config.json")
+        else:
+            self._model_set_status("Cleared — unattended agents use your claude default.")
+            self.flash("model cleared → claude default")
 
     def _set_pref(self, key, value):
         if getattr(self, key) == value:

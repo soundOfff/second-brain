@@ -625,3 +625,47 @@ Turns capture from push-only into pull: the brain now feeds itself unattended.
   5 active feeds intact.
 - **Tests.** 82 → 84 (expander default-collapsed regression + SHORTCUTS drift guard);
   full suite green after every commit.
+
+## 2026-07-01 — feat: Run feeder button on Feed Stats + README catch-up
+
+- **Command:** interactive session · two asks: README catch-up, then a GUI run trigger.
+- **README.** Caught the doc up with the built tooling: the capture bullet now lists all
+  five push surfaces deployed by `brain-clip-gui.sh install` (app, inbox folder, Services
+  Quick Action, Chrome button); a new "Triage in a window" bullet documents the desktop
+  app's three screens.
+- **Run feeder now.** New button in the Feed Stats header (right side — the screen is the
+  feeder's cockpit, so the trigger sits above the table it refreshes). Fires
+  `brain-feed run` as a subprocess off the Tk thread (15-min timeout), then refreshes the
+  stats cache and shows the run's closing `done: X deposited, Y queued` line in a status
+  label under the button. Guards: demo mode never runs it; an in-flight run can't be
+  double-fired; the pane only re-renders when the add-source form is collapsed and no
+  field has focus (a rebuild would wipe typed values) — otherwise the label updates in
+  place. Finishing on the Review screen toasts the summary with a "⇧R rescans the queue"
+  hint when items were queued; the queue itself is never mutated under the user.
+- **Tests.** 84 → 91 (`test_run_feeder.py`: demo guard, running-state re-render, finish
+  success/error, stale-label survival + rescan hint, summary parsing via the extracted
+  `_parse_run_summary`). The subprocess spawn itself is deliberately untested — it would
+  run the real feeder against the real vault. Full suite green.
+
+## 2026-07-01 — feat: YouTube channel as a source in the add-source form
+
+- **Command:** interactive session · "in feed pull source add a YouTube possibility to
+  add a channel as a source".
+- **Backend was already there.** The `yt` adapter (`adapter_yt` in `brain-feed.py`) has
+  shipped for a while — it fetches a channel's `videos.xml` RSS feed and pulls each new
+  video's transcript via `yt-dlp` (falling back to the feed summary). The gap was purely
+  the GUI: the new-source form only offered `webpage | rss | api`, so a channel could
+  only be added by hand-editing `feeds.toml`.
+- **Form.** Added a fourth TYPE segment (`youtube` → adapter `yt`) to the new-source card
+  in `brain-feed-gui.py`. Like rss/api it subscribes (appends a `[[feed]]` to
+  `feeds.toml`) rather than depositing one source; it shows Feed id / Daily cap / TRUST
+  and, correctly, no api MAPPING block. Added `yt` blurb + URL hint.
+- **URL normalizer.** New pure-string helper `youtube_feed_url()` so a user can paste a
+  `/channel/UC…` page URL, a bare `UC…`/`PL…` id, or a `playlist?list=…` URL and get the
+  canonical `youtube.com/feeds/videos.xml?channel_id=…` (or `?playlist_id=…`) the adapter
+  fetches. No network — subscribing stays a config edit; an `@handle` / `/c/` / `/user/`
+  URL (whose channel_id needs a lookup) is left as typed. The feed-id fallback for `yt`
+  derives from the channel/playlist id, not the useless `youtube.com` host.
+- **Tests.** 91 → 99: two subscribe cases (yt append + channel-URL normalization) in
+  `FeedSubscribe`, a `yt` arm on the type-selector swap test, and a six-case
+  `YoutubeFeedURL` class for the normalizer. Full suite green.
