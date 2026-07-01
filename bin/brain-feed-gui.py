@@ -1925,8 +1925,14 @@ class ReviewApp:
 
     def _ns_rebuild(self):
         self._ns_vals = self._ns_collect()
+        # The in-place rebuild momentarily shrinks the scroll canvas's inner frame,
+        # which clamps the viewport to the top — snapshot and restore it.
+        frac = self.card.canvas.yview()[0]
         self._build_ns_card()
         self.card.bind_wheel_to_children()   # fresh widgets need the wheel again
+        self.card.inner.update_idletasks()
+        self.card.canvas.configure(scrollregion=self.card.canvas.bbox("all"))
+        self.card.canvas.yview_moveto(frac)
 
     def _ns_set_kind(self, kind):
         if self._ns_kind != kind:
