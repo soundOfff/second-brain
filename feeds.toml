@@ -176,3 +176,61 @@ title = "Lobsters — AI tag"
 # mode = "text"
 # trust = "queue"
 # n = 10
+
+# === api testing examples (endpoints + mappings HTTP-200 validated 2026-07-01) =====
+# Four real public endpoints, ready to uncomment, for exercising the api adapter
+# end-to-end — one per JSON shape: enveloped array, root array, text mode, int guid.
+#
+# Hacker News front page via the Algolia search API (enveloped array). A few
+# front-page items are Ask/Show HN with no external link; url mode skips those.
+# [[feed]]
+# id = "hn-front-api"
+# adapter = "api"
+# url = "https://hn.algolia.com/api/v1/search?tags=front_page"
+# items_path = "hits"
+# url_field = "url"
+# title_field = "title"
+# guid_field = "objectID"
+# trust = "queue"
+# n = 5
+# tags = ["news"]
+#
+# Lobsters hottest via its native JSON — the response IS the array, so no items_path:
+# [[feed]]
+# id = "lobsters-hot-api"
+# adapter = "api"
+# url = "https://lobste.rs/hottest.json"
+# url_field = "url"
+# title_field = "title"
+# guid_field = "short_id"
+# trust = "queue"
+# n = 5
+# tags = ["news"]
+#
+# GitHub repo search in text mode — deposits each repo's description instead of
+# fetching a page (some repos have a null description; they deposit title-only):
+# [[feed]]
+# id = "gh-llm-repos"
+# adapter = "api"
+# url = "https://api.github.com/search/repositories?q=topic:llm&sort=updated"
+# items_path = "items"
+# url_field = "html_url"
+# title_field = "full_name"
+# guid_field = "node_id"
+# body_field = "description"
+# mode = "text"
+# trust = "queue"
+# n = 3
+# tags = ["code", "llm"]
+#
+# Dev.to articles by tag (root array; guid is an int — the adapter coerces scalars):
+# [[feed]]
+# id = "devto-ai"
+# adapter = "api"
+# url = "https://dev.to/api/articles?tag=ai&top=7"
+# url_field = "url"
+# title_field = "title"
+# guid_field = "id"
+# trust = "queue"
+# n = 3
+# tags = ["blog", "ai"]
