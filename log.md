@@ -669,3 +669,49 @@ Turns capture from push-only into pull: the brain now feeds itself unattended.
 - **Tests.** 91 → 99: two subscribe cases (yt append + channel-URL normalization) in
   `FeedSubscribe`, a `yt` arm on the type-selector swap test, and a six-case
   `YoutubeFeedURL` class for the normalizer. Full suite green.
+
+## 2026-07-06 — fix: faithful LLM cleanup at capture + GUI tactile polish
+
+- **Command:** interactive session · "double check this … the UI is not polish use
+  make-interfaces-feel-better … the text must be a better parsing use claude cli with
+  sonnet for not only scraping data (do the same with other sources like videos too)."
+- **Root cause (parsing).** Four freshly-clipped, uncommitted sources were garbage or
+  noisy: both YouTube captures (`stanford-cme295-transformers-llms`,
+  `the-three-flavors-of-generative-ui`) held only the YouTube footer chrome
+  (`Acerca de Prensa … © 2026 Google LLC`) because `yt-dlp` was not installed, so
+  `is_video_url` fell through to scraping the JS-rendered player page; the A2UI article
+  was double-captured and dragged in share buttons / "Related posts" / "posted in".
+- **Fix — extraction (see docs/adr/0003).** Installed `yt-dlp` (real caption path). Added
+  an optional, faithful `claude -p` cleanup pass to `brain-clip.sh` (url mode): strips
+  nav/share/chrome + dupes from articles, punctuates/paragraphs run-on auto-caption
+  transcripts, WITHOUT summarizing or inventing. Opt-out via `--no-llm` /
+  `BRAIN_CLIP_LLM=0`; model from `BRAIN_CLIP_MODEL` / `.brain/config.json` / `sonnet`;
+  runs from a neutral cwd (no repo CLAUDE.md/skills/tool-use); graceful fallback to the
+  raw extraction on any failure. Feeder subprocess timeout 90s → 300s so it inherits the
+  pass via `--dry-run`.
+- **Re-captured** the three URLs with the new pipeline, preserving their original
+  `2026-07-03` ids/dates (fixing the parse, not re-dating), and removed the redundant
+  A2UI `-2` duplicate. All three now carry real titles/authors from `yt-dlp`
+  (`Stanford Online`, `Mastra`) and full, punctuated, faithful bodies. `type: transcript`
+  for the two videos. Validator: 0 fail · 0 warn. No wiki/recap ripple — none were synced.
+- **Fix — UI polish (make-interfaces-feel-better).** Added scale-on-press (0.96) tactile
+  feedback to every canvas button (`_action_button`, `_ghost_button`, `_simple_button`)
+  via a new `_press_binder` helper — shrinks about centre on press, restores on release,
+  fires only if released over the button (drag-off cancels), no layout reflow. Added
+  `cursor="hand2"` + hover-brighten to all segmented tabs (`_screen_tab`, `_view_tab`,
+  `_segmented`) and enlarged the view/segment tab hit area (pady 4 → 6, padx 12 → 13).
+- **Tests.** Full suite green (104 tests). Added a manual press/release smoke (shrink,
+  restore, in-bounds fire, out-of-bounds cancel). Both scripts pass `zsh -n` / `ast.parse`.
+
+  - **Verification pass (5 adversarial agents).** Faithfulness of all three re-captured
+    sources: PASS — snippet-by-snippet, no substantive omission or hallucination (the
+    5%/15%/0% word deltas are chrome + caption-repetition removal, confirmed). Two code
+    reviews surfaced fixes, now applied: (HIGH) wrapped the feeder's `render_via_clip` in
+    try/except so a slow/hung `claude` skips the item instead of aborting the run;
+    (MED) inner `claude` timeout 300→240 to sit below the feeder's 300s outer timeout;
+    (MED) GUI press-release no longer gates firing on `state["down"]`, so a stray
+    grab-`<Leave>` mid-press can't swallow a click (smoke-verified); (LOW) fence-strip
+    made conservative (only whole-body-wrapped, never a leading code block) + fixed a
+    zsh backtick-in-"${…}" parse error; (LOW) compute the model once; (LOW) unified the
+    top-nav tab sizing (bar 40→48) with the in-card tabs; added a negation/number guard
+    to the transcript prompt.

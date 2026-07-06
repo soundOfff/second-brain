@@ -2,11 +2,17 @@
 # Second Brain — capture bridge (external tool #1 of docs/external-tools.md).
 #
 # Lands raw, immutable material into sources/ with VALID frontmatter — and nothing
-# else. It does ZERO synthesis and never invokes an LLM: that is the whole point. The
-# nightly launchd /sync (02:00) folds whatever this writes into the wiki. Because it is
-# deterministic and dependency-light (curl + python3 stdlib), it can be driven from a
-# macOS Shortcut, an iOS share-sheet, a browser "clip" button, or cron — anywhere, with
-# no keyboard in this repo and no API key.
+# else. It does ZERO *synthesis*: the nightly launchd /sync (02:00) folds whatever this
+# writes into the wiki. The extraction itself stays deterministic and dependency-light
+# (curl + python3 stdlib), so it can be driven from a macOS Shortcut, an iOS share-sheet,
+# a browser "clip" button, or cron — anywhere.
+#
+# One optional exception (see docs/adr/0003): a *faithful* `claude -p` cleanup pass on the
+# extracted body (url mode) — it strips nav/share/"related posts" chrome and dedupes
+# articles, and punctuates run-on auto-caption transcripts, WITHOUT summarizing or
+# inventing (that would be synthesis, which is still /sync's job). It is best-effort and
+# fully opt-out (--no-llm / BRAIN_CLIP_LLM=0); with it off, brain-clip is exactly the
+# old deterministic, no-LLM, no-API-key front door.
 #
 # Contrast: bin/brain-capture.sh runs the LLM /capture skill end-to-end (raw + ripple).
 # brain-clip.sh is the cheap front door — it only deposits the raw source.
@@ -24,8 +30,19 @@
 #   --url <u>      attach a source url (for file/text modes)
 #   --note "..."   prepend a note (as a blockquote) above the extracted/copied body
 #                  (url + text-file modes) — the page capture itself is kept intact
+#   --llm          force the faithful claude cleanup pass on the extracted body
+#   --no-llm       skip it (pure deterministic extraction, the classic behaviour)
 #   --dry-run      print the source that WOULD be written; touch nothing
 #   -h | --help    this help
+#
+# LLM cleanup (url mode): after the deterministic extraction, an optional single
+# `claude -p` pass FAITHFULLY cleans the body — strips nav/share/"related posts"
+# chrome and duplicate lines from articles, and punctuates + paragraphs run-on
+# auto-caption transcripts — WITHOUT summarizing, translating, or inventing. It is
+# best-effort: any failure falls back to the raw extraction, so the deterministic
+# front door still works with no CLI. Control: --llm/--no-llm, or BRAIN_CLIP_LLM=
+# auto|1|0 (default auto = on iff `claude` is on PATH). Model: BRAIN_CLIP_MODEL,
+# else .brain/config.json "model", else "sonnet".
 #
 # Exit: 0 on success (prints the path written), 1 on error. After writing, it runs the
 # contract validator (tool #3) on the new file so #3 guards what #1 feeds.
@@ -51,8 +68,16 @@ Flags:
   --author "..." set the author frontmatter key
   --url <u>      attach a source url (file/text modes)
   --note "..."   prepend a note (blockquote) above the extracted/copied body
+  --llm          force the faithful claude cleanup of the extracted body (url mode)
+  --no-llm       skip it — pure deterministic extraction
   --dry-run      print the source that WOULD be written; touch nothing
   -h | --help    this help
+
+LLM cleanup (url mode) runs a single `claude -p` pass that faithfully cleans the
+extracted body (strips nav/share/"related posts" chrome + dupes from articles;
+punctuates run-on caption transcripts) without summarizing or inventing. Best-effort:
+falls back to the raw extraction on any failure. Env: BRAIN_CLIP_LLM=auto|1|0 (default
+auto = on iff `claude` is present); model BRAIN_CLIP_MODEL / .brain/config.json / sonnet.
 EOF
 }
 
@@ -60,7 +85,7 @@ EOF
 # Flags may appear anywhere. Non-flag tokens collect into `pos`; the mode is decided
 # from pos[1] (url / existing file), and for the text/note case all positionals are
 # rejoined so unquoted multi-word notes still work. `--` stops flag parsing.
-TYPE_OVERRIDE="" TITLE_OVERRIDE="" AUTHOR_OVERRIDE="" URL_OVERRIDE="" NOTE_OVERRIDE="" DRYRUN=0
+TYPE_OVERRIDE="" TITLE_OVERRIDE="" AUTHOR_OVERRIDE="" URL_OVERRIDE="" NOTE_OVERRIDE="" DRYRUN=0 LLM_FLAG=""
 typeset -a pos
 endflags=0
 while (( $# )); do
@@ -72,6 +97,8 @@ while (( $# )); do
     --author)   AUTHOR_OVERRIDE="${2:?--author needs a value}"; shift 2 ;;
     --url)      URL_OVERRIDE="${2:?--url needs a value}"; shift 2 ;;
     --note)     NOTE_OVERRIDE="${2:?--note needs a value}"; shift 2 ;;
+    --llm)      LLM_FLAG=1; shift ;;
+    --no-llm)   LLM_FLAG=0; shift ;;
     --dry-run)  DRYRUN=1; shift ;;
     --)         endflags=1; shift ;;
     -)          pos+=("-"); shift ;;
@@ -173,6 +200,94 @@ is_video_url() {
     (http|https)://(www.)#vimeo.com/*)             return 0 ;;
   esac
   return 1
+}
+
+# --- optional faithful LLM cleanup -----------------------------------------
+# The deterministic extraction above is dependency-light but noisy: article HTML
+# drags in nav/share/"related posts" chrome and duplicate lines, and auto-caption
+# transcripts arrive as lowercase, unpunctuated run-on cues. When enabled, a single
+# `claude -p` pass cleans the body FAITHFULLY (no summarizing, translating, or
+# inventing). It is best-effort — any failure leaves the raw extraction untouched —
+# so the "no-LLM, no-API-key" front door still holds.
+
+llm_enabled() {
+  # explicit flag wins; then BRAIN_CLIP_LLM; default "auto" = on iff `claude` present.
+  if [[ -n "$LLM_FLAG" ]]; then [[ "$LLM_FLAG" == 1 ]]; return; fi
+  case "${BRAIN_CLIP_LLM:-auto}" in
+    0|off|false|no)  return 1 ;;
+    *)               command -v claude >/dev/null ;;   # 1/on/auto → need the CLI
+  esac
+}
+
+llm_model() {
+  if [[ -n "${BRAIN_CLIP_MODEL:-}" ]]; then print -r -- "$BRAIN_CLIP_MODEL"; return; fi
+  local cfg="$VAULT/.brain/config.json" m=""
+  [[ -r "$cfg" ]] && m="$(python3 - "$cfg" <<'PY' 2>/dev/null
+import json, sys
+try:
+    d = json.load(open(sys.argv[1]))
+    print((d.get("model") or "").strip() if isinstance(d, dict) else "")
+except Exception:
+    print("")
+PY
+)"
+  print -r -- "${m:-sonnet}"
+}
+
+# llm_clean <kind:article|transcript> <title> <url>   raw body on stdin -> clean on stdout.
+# Non-zero exit (and no stdout) on any failure, so the caller keeps the raw body.
+llm_clean() {
+  local kind="$1" title="$2" url="$3" model="${4:-}" raw prompt out
+  raw="$(cat)"
+  [[ -n "${raw// /}" ]] || return 1
+  command -v claude >/dev/null || return 1
+  [[ -n "$model" ]] || model="$(llm_model)"
+  if [[ "$kind" == transcript ]]; then
+    prompt="You are a transcript cleanup filter for a personal knowledge base. You are given the auto-generated caption transcript of a video (title: \"$title\", url: $url) — usually one short run-on line per caption cue, lowercase, unpunctuated, with phrases the auto-captioner repeats.
+
+STRICT RULES:
+- Preserve the FULL spoken content and meaning. Do NOT summarize, omit ideas, or invent anything.
+- Restore readability: add sentence capitalization and punctuation, and group sentences into coherent paragraphs.
+- Remove caption artifacts: duplicated/overlapping phrases and noise markers like [Music] or [Applause] that carry no words.
+- Fix a transcribed word ONLY when the intended word is unambiguous from context; otherwise leave it as-is. Do NOT translate. NEVER change a negation (not / no / cannot / never) or a number unless it is unmistakably a caption error.
+- Do NOT add headings, timestamps, speaker labels, or any summary that was not spoken.
+- Output ONLY the cleaned transcript prose. No preamble, and do NOT wrap the output in a code fence."
+  else
+    prompt="You are a web-page extraction cleanup filter for a personal knowledge base. You are given the rough auto-extracted text of a page (title: \"$title\", url: $url). Return a clean, faithful Markdown rendering of the MAIN ARTICLE/PAGE CONTENT only.
+
+STRICT RULES:
+- Preserve ALL substantive content verbatim: every paragraph, heading, list item, block quote, code snippet, table, and data point of the actual article. Keep the original wording and language — do NOT translate.
+- Do NOT summarize, paraphrase, shorten, rewrite, or add commentary of your own.
+- REMOVE only non-content chrome: navigation, menus, breadcrumbs, social/share buttons and their labels (Facebook, Twitter, X, LinkedIn, Mail, Copy), cookie/consent/newsletter banners, login prompts, 'Related posts', 'Read more', 'Previous'/'Next', 'posted in', tag/category footers, follow widgets, comment counts, ad/promo blurbs, and pure-UI lines like \"Sorry, your browser doesn't support playback for this video\".
+- Remove duplicated lines and blocks left by the extractor.
+- Restore structure with Markdown: #/##/### headings, - bullets, 1. numbered lists, > quotes, fenced code. Keep the original heading hierarchy. Do NOT wrap heading text in ** bold markers (a heading is already emphasized), and strip stray emphasis markers left mid-word by the extractor.
+- Output ONLY the cleaned Markdown body. No preamble, and do NOT wrap the whole output in a code fence."
+  fi
+  # A neutral cwd keeps claude from loading THIS repo's wiki-owner CLAUDE.md / skills
+  # or attempting tool use — we want a pure, single-shot text transform. A timeout
+  # (when available) bounds the unattended path; the CLI otherwise self-terminates.
+  # 240s inner deadline sits comfortably below the feeder's 300s subprocess timeout, so
+  # when a cleanup runs long the inner limit fires first and we fall back to the raw body
+  # (exit non-zero) rather than the feeder killing the whole brain-clip mid-write.
+  local -a runner
+  runner=(claude -p "$prompt" --model "$model")
+  if   command -v gtimeout >/dev/null; then runner=(gtimeout 240 "${runner[@]}")
+  elif command -v timeout  >/dev/null; then runner=(timeout  240 "${runner[@]}")
+  fi
+  out="$(print -r -- "$raw" | (cd "${TMPDIR:-/tmp}" && "${runner[@]}" 2>/dev/null))" || return 1
+  out="${out//$'\r'/}"
+  # Strip a code fence ONLY when the model wrapped the WHOLE body in one (first line a
+  # fenced ```lang line AND the last line a lone closing fence), never a legitimate
+  # leading code block. `fence` holds the three backticks as a var so they never sit
+  # literally inside a double-quoted ${…} (where zsh would read them as a subshell).
+  local fence='```'
+  local first="${out%%$'\n'*}" last="${out##*$'\n'}"
+  if [[ "$out" == *$'\n'* && "$first" == "$fence"* && "$first" != *' '* && "$last" == "$fence" ]]; then
+    out="${out#*$'\n'}"           # drop the opening fence line
+    out="${out%$'\n'$fence}"      # drop the trailing fence line
+  fi
+  [[ -n "${out// /}" ]] || return 1
+  print -r -- "$out"
 }
 
 URLV="" AUTHORV="$AUTHOR_OVERRIDE" TITLE="" TYPE="" ID=""
@@ -360,6 +475,24 @@ PY
     TITLE="${URLV#*://}"; TITLE="${TITLE%%/*}"
   fi
   ID="$(unique_id "$(slugify "$TITLE")")"
+
+  # --- faithful LLM cleanup of the extracted body (best-effort) --------------
+  # `deftype` (not the possibly-overridden TYPE) reflects the body's real nature:
+  # transcript for captions, article for scraped HTML.
+  if [[ -n "${BODY// /}" ]] && llm_enabled; then
+    if command -v claude >/dev/null; then
+      clip_model="$(llm_model)"                # compute once; pass into llm_clean
+      print -u2 "$SELF: cleaning extracted $deftype with claude ($clip_model)…"
+      if cleaned="$(print -r -- "$BODY" | llm_clean "$deftype" "$TITLE" "$URLV" "$clip_model")" \
+           && [[ -n "${cleaned// /}" ]]; then
+        BODY="$cleaned"
+      else
+        print -u2 "$SELF: note — LLM cleanup failed; keeping the raw extraction."
+      fi
+    else
+      print -u2 "$SELF: note — LLM cleanup requested but 'claude' is not on PATH; keeping the raw extraction."
+    fi
+  fi
   if [[ -z "${BODY// /}" ]]; then
     if [[ "$deftype" == transcript ]]; then
       BODY="> brain-clip: no captions/transcript were available for this video (or yt-dlp

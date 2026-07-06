@@ -821,7 +821,7 @@ class ReviewApp:
     # -- top tab bar (Review Queue ↔ Feed Stats) -------------------------------
     def _build_topbar(self, parent) -> None:
         t = self.t
-        bar = tk.Frame(parent, bg=BASE["panel"], height=40)
+        bar = tk.Frame(parent, bg=BASE["panel"], height=48)
         bar.pack(side="top", fill="x")
         bar.pack_propagate(False)
         tk.Frame(bar, bg=BASE["border"], height=1).pack(side="bottom", fill="x")
@@ -835,12 +835,18 @@ class ReviewApp:
     def _screen_tab(self, parent, label, value):
         t = self.t
         on = (self.screen == value)
-        cell = tk.Frame(parent, bg=(t["ac"] if on else BASE["raise"]))
+        cell = tk.Frame(parent, bg=(t["ac"] if on else BASE["raise"]),
+                        cursor=("arrow" if on else "hand2"))
         cell.pack(side="left", padx=2, pady=2)
         lab = tk.Label(cell, text=label, bg=cell["bg"],
                        fg=(t["ac_on"] if on else BASE["ink_dim"]),
-                       font=self.font("mono", 11, "bold"), padx=12, pady=4)
+                       font=self.font("mono", 11, "bold"), padx=13, pady=6,
+                       cursor=("arrow" if on else "hand2"))
         lab.pack()
+        if not on:                                   # inactive tab brightens on hover
+            for w in (cell, lab):
+                w.bind("<Enter>", lambda e: lab.configure(fg=BASE["ink"]))
+                w.bind("<Leave>", lambda e: lab.configure(fg=BASE["ink_dim"]))
         for w in (cell, lab):
             w.bind("<Button-1>", lambda e: self.set_screen(value))
 
@@ -970,6 +976,43 @@ class ReviewApp:
         """Draw a rounded rectangle on canvas c. Returns item id."""
         return ReviewApp._rounded_polygon(c, x1, y1, x2, y2, r, **kw)
 
+    # Scale-on-press: the tactile feedback the make-interfaces-feel-better skill asks
+    # for (a subtle 0.96 shrink on click). A Tk canvas has no CSS transform, so we
+    # scale every drawn item about the button's centre on press and restore on release
+    # — the canvas widget itself keeps its size, so nothing in the layout reflows. The
+    # command fires on *release* (and only if released over the button), so dragging off
+    # cancels, exactly like a native button.
+    _PRESS_SCALE = 0.96
+
+    def _press_binder(self, c, W, H, command):
+        S = self._PRESS_SCALE
+        state = {"down": False}
+
+        def reset():
+            if state["down"]:
+                c.scale("all", W / 2, H / 2, 1 / S, 1 / S)
+                state["down"] = False
+
+        def down(_):
+            if not state["down"]:
+                c.scale("all", W / 2, H / 2, S, S)
+                state["down"] = True
+
+        def up(e):
+            reset()                                  # idempotent un-shrink
+            # The implicit pointer grab means a ButtonRelease-1 on this canvas implies the
+            # press began here, so fire iff it also *ends* over the button (drag-off
+            # cancels). Not gated on state["down"], so a stray grab-<Leave> that reset the
+            # shrink mid-press can't also swallow the click.
+            if 0 <= e.x <= W and 0 <= e.y <= H:
+                command()
+
+        c.bind("<ButtonPress-1>", down)
+        c.bind("<ButtonRelease-1>", up)
+        binder = type("PressBinder", (), {})()
+        binder.reset = reset
+        return binder
+
     def _action_button(self, parent, text, key, kind, command, enabled=True, width_mult=1):
         """kind: 'primary' | 'outline' | 'drop'. Returns a rounded canvas button.
 
@@ -1013,7 +1056,7 @@ class ReviewApp:
         c.create_text(cx + chip_w / 2, cy, text=key, fill=chip_fg, font=chip_font)
 
         if enabled:
-            c.bind("<Button-1>", lambda e: command())
+            press = self._press_binder(c, W, H, command)
 
             def enter(_):
                 if kind == "primary":
@@ -1029,6 +1072,7 @@ class ReviewApp:
                     c.itemconfig(lab_id, fill=BASE["ink"])
 
             def leave(_):
+                press.reset()                       # undo any in-flight press-shrink
                 c.itemconfig(body, fill=bg, outline=bd)
                 c.itemconfig(lab_id, fill=fg)
                 c.itemconfig(chip_box, fill=chip_bg)
@@ -1053,13 +1097,14 @@ class ReviewApp:
                                font=font, anchor="w")
         c.create_text(padx + lab_w + gap, cy, text=key, fill=BASE["ink_faint"],
                       font=font, anchor="w")
-        c.bind("<Button-1>", lambda e: command())
+        press = self._press_binder(c, W, H, command)
 
         def enter(_):
             c.itemconfig(body, outline=t["ac"])
             c.itemconfig(lab_id, fill=t["ac"])
 
         def leave(_):
+            press.reset()
             c.itemconfig(body, outline=BASE["rail"])
             c.itemconfig(lab_id, fill=BASE["ink_muted"])
 
@@ -1343,12 +1388,18 @@ class ReviewApp:
     def _view_tab(self, parent, label, value):
         t = self.t
         on = (self.view == value)
-        cell = tk.Frame(parent, bg=(t["ac"] if on else BASE["raise"]))
+        cell = tk.Frame(parent, bg=(t["ac"] if on else BASE["raise"]),
+                        cursor=("arrow" if on else "hand2"))
         cell.pack(side="left", padx=2, pady=2)
         lab = tk.Label(cell, text=label, bg=cell["bg"],
                        fg=(t["ac_on"] if on else BASE["ink_dim"]),
-                       font=self.font("mono", 11, "bold"), padx=12, pady=4)
+                       font=self.font("mono", 11, "bold"), padx=13, pady=6,
+                       cursor=("arrow" if on else "hand2"))
         lab.pack()
+        if not on:                                   # inactive tab brightens on hover
+            for w in (cell, lab):
+                w.bind("<Enter>", lambda e: lab.configure(fg=BASE["ink"]))
+                w.bind("<Leave>", lambda e: lab.configure(fg=BASE["ink_dim"]))
         for w in (cell, lab):
             w.bind("<Button-1>", lambda e: self.set_view(value))
 
@@ -2095,12 +2146,18 @@ class ReviewApp:
                        highlightbackground=BASE["border"])
         for label, val in options:
             on = (val == value)
-            cell = tk.Frame(seg, bg=(t["ac"] if on else BASE["raise"]))
+            cell = tk.Frame(seg, bg=(t["ac"] if on else BASE["raise"]),
+                            cursor=("arrow" if on else "hand2"))
             cell.pack(side="left", padx=2, pady=2)
             lab = tk.Label(cell, text=label, bg=cell["bg"],
                            fg=(t["ac_on"] if on else BASE["ink_dim"]),
-                           font=self.font("mono", 11, "bold"), padx=12, pady=4)
+                           font=self.font("mono", 11, "bold"), padx=13, pady=6,
+                           cursor=("arrow" if on else "hand2"))
             lab.pack()
+            if not on:                               # inactive cell brightens on hover
+                for w in (cell, lab):
+                    w.bind("<Enter>", lambda e, la=lab: la.configure(fg=BASE["ink"]))
+                    w.bind("<Leave>", lambda e, la=lab: la.configure(fg=BASE["ink_dim"]))
             for w in (cell, lab):
                 w.bind("<Button-1>", lambda e, v=val: on_change(v))
         return seg
@@ -2209,13 +2266,14 @@ class ReviewApp:
                       highlightthickness=0, cursor="hand2")
         body = self._round_rect(c, 1, 1, W - 1, H - 1, r, fill=bg, outline=bd, width=1)
         lab = c.create_text(W / 2, H / 2, text=text, fill=fg, font=font)
-        c.bind("<Button-1>", lambda e: command())
+        press = self._press_binder(c, W, H, command)
 
         def enter(_):
             nb = blend("#ffffff", t["ac"], 0.10)
             c.itemconfig(body, fill=nb, outline=nb)
 
         def leave(_):
+            press.reset()
             c.itemconfig(body, fill=bg, outline=bd)
 
         c.bind("<Enter>", enter)

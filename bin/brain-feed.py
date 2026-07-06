@@ -327,7 +327,8 @@ def render_via_clip(item: dict) -> tuple[str | None, str | None, str]:
         if item.get("title"):
             args += ["--title", item["title"]]
         args += [item["url"]]
-        proc = subprocess.run(args, capture_output=True, text=True, timeout=90)
+        # 300s (not 90): brain-clip may run a `claude -p` cleanup pass per item.
+        proc = subprocess.run(args, capture_output=True, text=True, timeout=300)
     else:  # text
         args = [str(CLIP), "--dry-run"]
         if item.get("type"):
@@ -338,7 +339,7 @@ def render_via_clip(item: dict) -> tuple[str | None, str | None, str]:
             args += ["--url", item["url"]]
         args += ["-"]
         proc = subprocess.run(
-            args, input=item.get("body") or "", capture_output=True, text=True, timeout=90
+            args, input=item.get("body") or "", capture_output=True, text=True, timeout=300
         )
     path, content = parse_dryrun(proc.stdout)
     return path, content, proc.stderr
@@ -827,7 +828,23 @@ def run(dry_run: bool = False, only_feed: str | None = None) -> int:
                 deferred += 1          # leave UNSEEN: it drains on a future day
                 continue
 
-            proposed, content, stderr = render_via_clip(it)
+            # render_via_clip shells out to brain-clip, which may run a `claude -p`
+            # cleanup pass — a slow/hung item must NOT abort the whole feeder run, so a
+            # timeout (or any error) is treated as a per-item render failure.
+            try:
+                proposed, content, stderr = render_via_clip(it)
+            except subprocess.TimeoutExpired:
+                failed += 1
+                log(f"[{fid}] render timed out: {url or it.get('title')}")
+                if not dry_run:
+                    mark_seen(con, fid, guid, url)
+                continue
+            except Exception as e:
+                failed += 1
+                log(f"[{fid}] render error: {url or it.get('title')} — {e}")
+                if not dry_run:
+                    mark_seen(con, fid, guid, url)
+                continue
             if not content:
                 failed += 1
                 snippet = (stderr or "").strip().splitlines()[-1:] or [""]
