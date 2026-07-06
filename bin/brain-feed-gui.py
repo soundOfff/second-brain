@@ -64,16 +64,32 @@ from pathlib import Path
 import tkinter as tk
 import tkinter.font as tkfont
 
-# --- reuse brain-feed.py (hyphenated filename → import via importlib) ----------
-_FEED_PY = Path(__file__).resolve().parent / "brain-feed.py"
-_spec = importlib.util.spec_from_file_location("brain_feed", _FEED_PY)
-brain_feed = importlib.util.module_from_spec(_spec)
-_spec.loader.exec_module(brain_feed)
-
-VAULT = brain_feed.VAULT
-SOURCES = brain_feed.SOURCES
-REVIEW_DIR = brain_feed.REVIEW_DIR
-RECAPS = VAULT / "wiki" / "recaps"       # a source has a recap iff RECAPS/<id>.md exists
+# --- shared helpers: Item + preview + prefs live in bin/brain_feed_items.py so
+# the FastAPI backend (apps/api) sees the same model. That module also handles
+# loading brain-feed.py (a hyphenated filename → importlib) once, and registers
+# it in sys.modules so subsequent imports return the same instance.
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+from brain_feed_items import (            # noqa: E402
+    brain_feed,
+    VAULT,
+    SOURCES,
+    REVIEW_DIR,
+    RECAPS,
+    Item,
+    _from_file,
+    load_real_items,
+    load_demo_items,
+    parse_tags,
+    inject_tags,
+    youtube_feed_url,
+    rel_time,
+    prefs_path,
+    load_prefs,
+    save_prefs,
+    brain_config_path,
+    load_brain_config,
+    save_brain_config,
+)
 
 
 # ============================================================================
@@ -139,129 +155,6 @@ def blend(fg: str, bg: str, alpha: float) -> str:
     """Composite `fg` over `bg` at `alpha` → opaque hex (emulates rgba on a known bg)."""
     f, b = _hex_to_rgb(fg), _hex_to_rgb(bg)
     return _rgb_to_hex(tuple(f[i] * alpha + b[i] * (1 - alpha) for i in range(3)))
-
-
-def parse_tags(raw: str) -> list[str]:
-    if not raw:
-        return []
-    raw = raw.strip().lstrip("[").rstrip("]")
-    out = []
-    for part in raw.split(","):
-        t = part.strip().strip('"').strip("'").lstrip("#").strip()
-        if t:
-            out.append(t)
-    return out
-
-
-def inject_tags(content: str, tags: list[str]) -> str:
-    """Add a `tags: [...]` line to a source's frontmatter if absent, returning the
-    content unchanged when there's nothing to do. Mirrors brain_feed.inject_provenance
-    but *without* stamping a feed `via:` — a source hand-made in this window is a plain
-    source, not a feed pull, so it carries no feed provenance."""
-    if not tags:
-        return content
-    lines = content.splitlines()
-    if not lines or lines[0].strip() != "---":
-        return content
-    end = next((i for i in range(1, len(lines)) if lines[i].strip() == "---"), None)
-    if end is None:
-        return content
-    fm = lines[1:end]
-    if any(re.match(r"^tags:\s", l) for l in fm):
-        return content
-    fm.append("tags: [" + ", ".join(tags) + "]")
-    out = "\n".join(["---", *fm, "---", *lines[end + 1:]])
-    return out + "\n" if content.endswith("\n") else out
-
-
-def youtube_feed_url(url: str) -> str:
-    """Normalize what a user pastes for a YouTube channel into the RSS feed URL the
-    `yt` adapter fetches: https://www.youtube.com/feeds/videos.xml?channel_id=<ID>.
-
-    Pure string rewriting — no network, so subscribing stays a config edit. Handles the
-    cases we can resolve offline; anything else (an @handle, /c/, or /user/ path, whose
-    channel_id needs a lookup) is returned unchanged for the feeder to fetch as-is."""
-    url = (url or "").strip()
-    if not url or "feeds/videos.xml" in url:      # already the RSS feed URL
-        return url
-    feed = "https://www.youtube.com/feeds/videos.xml"
-    # A bare id pasted on its own: UC… (channel) or PL…/UU…/OL… (playlist).
-    if re.fullmatch(r"UC[\w-]{22}", url):
-        return f"{feed}?channel_id={url}"
-    if re.fullmatch(r"(?:PL|UU|OL|LL|FL)[\w-]{10,}", url):
-        return f"{feed}?playlist_id={url}"
-    m = re.search(r"youtube\.com/channel/(UC[\w-]{22})", url)
-    if m:
-        return f"{feed}?channel_id={m.group(1)}"
-    q = urllib.parse.parse_qs(urllib.parse.urlsplit(url).query)
-    if q.get("list"):                             # a /playlist?list=… or watch?list=… URL
-        return f"{feed}?playlist_id={q['list'][0]}"
-    return url                                     # @handle / /c/ / /user/ — leave as typed
-
-
-def prefs_path() -> Path:
-    """Appearance prefs live in the gitignored .brain/ — looked up lazily so tests
-    that redirect VAULT never touch the real vault."""
-    return VAULT / ".brain" / "gui-prefs.json"
-
-
-def load_prefs() -> dict:
-    try:
-        d = json.loads(prefs_path().read_text(encoding="utf-8"))
-        return d if isinstance(d, dict) else {}
-    except (OSError, ValueError):
-        return {}
-
-
-def save_prefs(prefs: dict) -> None:
-    """Best-effort persist — appearance must never crash triage."""
-    try:
-        p = prefs_path()
-        p.parent.mkdir(parents=True, exist_ok=True)
-        p.write_text(json.dumps(prefs, indent=2) + "\n", encoding="utf-8")
-    except OSError:
-        pass
-
-
-def brain_config_path() -> Path:
-    """Brain runtime config — currently just the Claude model the unattended
-    sync/digest/capture agents run as. Lives in the gitignored .brain/config.json,
-    written here and read by bin/brain-run.sh at each headless run. Deliberately
-    separate from gui-prefs.json (appearance) and feeds.toml (feeder): the model is
-    neither the look of this window nor a feed — it is what `claude -p` runs as."""
-    return VAULT / ".brain" / "config.json"
-
-
-def load_brain_config() -> dict:
-    try:
-        d = json.loads(brain_config_path().read_text(encoding="utf-8"))
-        return d if isinstance(d, dict) else {}
-    except (OSError, ValueError):
-        return {}
-
-
-def save_brain_config(updates: dict) -> None:
-    """Merge `updates` into .brain/config.json, preserving any unrelated keys, and
-    write it back. Raises OSError if the file can't be written — unlike appearance
-    prefs this is an explicit Save, so the caller surfaces the failure."""
-    cfg = load_brain_config()
-    cfg.update(updates)
-    p = brain_config_path()
-    p.parent.mkdir(parents=True, exist_ok=True)
-    p.write_text(json.dumps(cfg, indent=2) + "\n", encoding="utf-8")
-
-
-def rel_time(epoch: float) -> str:
-    secs = max(0, time.time() - epoch)
-    if secs < 90:
-        return "just now"
-    mins = secs / 60
-    if mins < 90:
-        return f"{round(mins)}m ago"
-    hrs = mins / 60
-    if hrs < 36:
-        return f"{round(hrs)}h ago"
-    return f"{round(hrs / 24)}d ago"
 
 
 # ============================================================================
@@ -365,199 +258,6 @@ def strip_frontmatter(text: str) -> str:
             if lines[i].strip() == "---":
                 return "\n".join(lines[i + 1:])
     return text
-
-
-# ============================================================================
-# Item model — unifies real queued files and the demo showcase data.
-# ============================================================================
-class Item:
-    def __init__(self, *, iid, title, via, itype, url, reason, summary, tags,
-                 overlaps=None, breakdown=None, queued="", length="", tokens="",
-                 path: Path | None = None, text: str | None = None):
-        self.iid = iid
-        self.title = title or iid
-        self.via = via or ""
-        self.itype = itype or ""
-        self.url = url or ""
-        self.reason = reason or ""
-        self.summary = summary or ""             # recap body (string, may be multi-para)
-        self.tags = tags or []
-        self.overlaps = overlaps or []           # [{page, note}]  (empty for real items)
-        self.breakdown = breakdown or []         # [{at, label, target}]
-        self.queued = queued
-        self.length = length
-        self.tokens = tokens
-        self.path = path                          # None → demo (no filesystem side effects)
-        self.text = text
-
-    # paragraphs of the recap, for the outline view
-    def paragraphs(self) -> list[str]:
-        return [p.strip() for p in self.summary.split("\n") if p.strip()]
-
-    # masthead lines to skip in the preview fallback (bare "16 June 2026" dates)
-    _DATE_RE = re.compile(r"^\s*\d{1,2}\s+[A-Za-z]+\s+\d{4}\s*$")
-    # source headings that are scaffolding, not real content sections
-    _SKIP_HEADINGS = {"contents", "table of contents", "acknowledgments",
-                      "acknowledgements", "disclaimer", "references", "footnotes"}
-
-    def outline_kind(self) -> str:
-        """How the Outline view's segments were derived — drives an honest label.
-
-        'breakdown' = a real, /sync-computed decomposition; 'sections' = the
-        source's own markdown headings; 'preview' = just its first body lines.
-        """
-        if self.breakdown:
-            return "breakdown"
-        if self._heading_segments():
-            return "sections"
-        return "preview"
-
-    def outline_segments(self) -> list[dict]:
-        """Segments for the Outline view.
-
-        A real, /sync-computed breakdown wins. Otherwise fall back to the
-        source's own section headings — and, lacking those, its first few body
-        lines with the masthead (title, date, byline) skipped. The fallback is
-        a preview of the raw source, not a semantic decomposition.
-        """
-        if self.breakdown:
-            return self.breakdown
-        return self._heading_segments() or self._preview_segments()
-
-    def _heading_segments(self) -> list[dict]:
-        """Level-2 markdown headings from the raw source, as outline sections."""
-        if not self.text:
-            return []
-        segs = []
-        for line in self.text.splitlines():
-            m = re.match(r"^##\s+(.*\S)\s*$", line)
-            if not m:
-                continue
-            label = m.group(1).strip()
-            if label.lower() in self._SKIP_HEADINGS:
-                continue
-            segs.append({"at": "", "label": label, "target": ""})
-            if len(segs) >= 8:
-                break
-        return segs
-
-    def _preview_segments(self) -> list[dict]:
-        """First few real body lines, with masthead (title/date) skipped."""
-        segs = []
-        for para in self.paragraphs():
-            if para.startswith("# ") or self._DATE_RE.match(para):
-                continue
-            stripped = para.lstrip("#").strip()
-            if not stripped:
-                continue
-            words = stripped.split()
-            label = " ".join(words[:11]) + ("…" if len(words) > 11 else "")
-            segs.append({"at": "", "label": label, "target": ""})
-            if len(segs) >= 6:
-                break
-        return segs
-
-
-def _from_file(path: Path) -> Item:
-    text = path.read_text(encoding="utf-8", errors="replace")
-    fm, body = brain_feed._preview(text, n=400)
-    summary = "\n".join(body)
-    words = len(summary.split())
-    via = fm.get("via", "")
-    try:
-        queued = rel_time(path.stat().st_mtime)
-    except OSError:
-        queued = fm.get("captured", "")
-    return Item(
-        iid=str(path),
-        title=fm.get("title", path.stem),
-        via=via,
-        itype=fm.get("type", ""),
-        url=fm.get("url", ""),
-        reason=(f"queued from {via}" if via else "queued candidate"),
-        summary=summary or "(no body preview)",
-        tags=parse_tags(fm.get("tags", "")),
-        overlaps=[],                              # real overlaps are computed at /sync
-        breakdown=[],
-        queued=queued,
-        length=(f"{words:,} words" if words else ""),
-        tokens=(f"~{words * 4 // 3000 + 1}k" if words > 200 else ""),
-        path=path,
-        text=text,
-    )
-
-
-def load_real_items() -> list[Item]:
-    REVIEW_DIR.mkdir(parents=True, exist_ok=True)
-    return [_from_file(p) for p in sorted(REVIEW_DIR.glob("*.md"))]
-
-
-def load_demo_items() -> list[Item]:
-    seed = [
-        dict(
-            iid="arxiv", title="Attention Is All You Need, Revisited",
-            via="arxiv-cs-cl", itype="paper", url="arxiv.org/abs/2406.99021",
-            reason="matched filter: transformers",
-            summary=("A retrospective re-derivation of the original Transformer that re-runs the "
-                     "2017 ablations at modern scale. Core claim: multi-head attention’s edge over "
-                     "recurrence holds, but the gap from positional encoding choices is far larger "
-                     "than first reported. Includes updated training curves and a cleaner notation "
-                     "for the attention operator."),
-            tags=["transformers", "attention", "architecture"],
-            overlaps=[
-                {"page": "concepts/transformer", "note": "updates §Architecture, adds 2024 ablation data"},
-                {"page": "entities/vaswani-et-al", "note": "new citation → follow-up work"},
-            ],
-            breakdown=[
-                {"at": "§1", "label": "Re-derivation of the attention operator", "target": "concepts/transformer"},
-                {"at": "§3", "label": "Modern-scale ablations", "target": "concepts/transformer"},
-                {"at": "§5", "label": "The positional-encoding gap", "target": "entities/vaswani-et-al"},
-            ],
-            queued="2h ago", length="8,200 words", tokens="~11k",
-        ),
-        dict(
-            iid="hn", title="HN thread — are local LLMs finally good enough?",
-            via="hn-ai", itype="article", url="news.ycombinator.com/item?id=99999999",
-            reason="high score (480+) on topic: local-llms",
-            summary=("A 400-comment thread weighing whether 30B-class local models have crossed the "
-                     "“daily-driver” line. Strong disagreement: the pro camp cites privacy, offline "
-                     "use, and falling latency; the skeptics point at tool-use reliability and "
-                     "long-context degradation. Consensus forms around “good enough for drafting, "
-                     "not for agents.”"),
-            tags=["local-llms", "inference", "privacy"],
-            overlaps=[
-                {"page": "concepts/local-inference", "note": "open question: where is the daily-driver threshold?"},
-            ],
-            breakdown=[
-                {"at": "cluster 1", "label": "Pro: privacy, offline, falling latency", "target": "concepts/local-inference"},
-                {"at": "cluster 2", "label": "Skeptic: tool-use reliability, long-context decay", "target": "concepts/local-inference"},
-                {"at": "cluster 3", "label": "Consensus: drafting, not agents", "target": "concepts/local-inference"},
-            ],
-            queued="5h ago", length="12,400 words", tokens="~16k",
-        ),
-        dict(
-            iid="yt", title="Karpathy — Build a second brain with an LLM-maintained wiki",
-            via="youtube-wl", itype="video", url="youtube.com/watch?v=aBcD1234xyz",
-            reason="channel you follow: A. Karpathy",
-            summary=("Talk arguing you should let the model own and maintain a wiki rather than RAG "
-                     "over raw notes. The synthesis is precomputed once into cross-linked, auditable "
-                     "pages and kept current as sources arrive. Walks through the three-layer vault "
-                     "(immutable sources → AI-owned wiki → schema) and the capture/sync/lint loop."),
-            tags=["second-brain", "knowledge-mgmt", "agents"],
-            overlaps=[
-                {"page": "concepts/llm-wiki", "note": "primary source for the method — create page"},
-                {"page": "index", "note": "add to map of content"},
-            ],
-            breakdown=[
-                {"at": "00:00", "label": "Why not RAG over raw notes", "target": "concepts/llm-wiki"},
-                {"at": "04:10", "label": "The three-layer vault", "target": "concepts/llm-wiki"},
-                {"at": "11:30", "label": "The capture / sync / lint loop", "target": "index"},
-                {"at": "16:05", "label": "Running it unattended (launchd)", "target": "index"},
-            ],
-            queued="1d ago", length="18:42 video", tokens="~9k",
-        ),
-    ]
-    return [Item(**d) for d in seed]
 
 
 # ============================================================================

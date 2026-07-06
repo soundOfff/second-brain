@@ -1,0 +1,159 @@
+@import "tailwindcss";
+
+/* ── base tokens (from bin/gui/review-queue/index.html) ── */
+:root {
+  --ink: #ece8df;
+  --ink-bright: #f5f1e8;
+  --ink-muted: #b8b1a4;
+  --ink-dim: #9a9384;
+  --ink-dim2: #8a8474;
+  --ink-faint: #7e786b;
+  --ink-fainter: #5a554c;
+  --hair: #4a443a;
+  --bg: #1a1916;
+  --panel: #1d1b17;
+  --raise: #211e1a;
+  --sunk: #1f1c18;
+  --node: #252219;
+  --border: #322e28;
+  --border-soft: #2a2722;
+  --rail-neutral: #3a362f;
+  --frame: #34302a;
+  --recap-ink: #d7d1c4;
+  --drop-border: #8a5a45;
+  --drop-ink: #e0a890;
+  --font-ui: Inter, system-ui, -apple-system, sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
+  --ease: cubic-bezier(0.2, 0, 0, 1);
+  --ac: #d8a04a;
+  --ac-on: #1a1916;
+  --ac-rgb: 216, 160, 74;
+  --sel-bg: rgba(var(--ac-rgb), 0.08);
+  --qrail: var(--rail-neutral);
+  --qrail-w: 1.5px;
+  --grail: var(--rail-neutral);
+  --grail-w: 1px;
+  --reason-bg: rgba(var(--ac-rgb), 0.12);
+  --side-pad: 16px 18px 12px;
+  --head-pad: 22px 28px 16px;
+  --title-size: 23px;
+  --card-pad: 22px 28px 24px;
+  --recap-size: 14.5px;
+  --recap-pad: 18px 20px;
+  --bar-pad: 13px 22px;
+  --btn-h: 34px;
+  --btn-pad: 0 14px;
+  --btn-f: 12.5px;
+  --footer-h: 60px;
+  --row-pt: 11px;
+  --row-pb: 11px;
+  --node-c: 22px;
+}
+
+:root[data-density="compact"] {
+  --side-pad: 12px 16px 9px;
+  --head-pad: 14px 24px 11px;
+  --title-size: 19px;
+  --card-pad: 15px 24px 18px;
+  --recap-size: 13px;
+  --recap-pad: 14px 16px;
+  --bar-pad: 9px 18px;
+  --btn-h: 30px;
+  --btn-pad: 0 11px;
+  --btn-f: 12px;
+  --footer-h: 48px;
+  --row-pt: 9px;
+  --row-pb: 9px;
+  --node-c: 20px;
+}
+
+:root[data-intensity="vivid"] {
+  --sel-bg: rgba(var(--ac-rgb), 0.13);
+  --qrail: rgba(var(--ac-rgb), 0.4);
+  --qrail-w: 2px;
+  --grail: rgba(var(--ac-rgb), 0.42);
+  --grail-w: 2px;
+  --reason-bg: rgba(var(--ac-rgb), 0.16);
+}
+
+@theme inline {
+  --color-ink: var(--ink);
+  --color-ink-bright: var(--ink-bright);
+  --color-ink-muted: var(--ink-muted);
+  --color-ink-dim: var(--ink-dim);
+  --color-ink-faint: var(--ink-faint);
+  --color-bg: var(--bg);
+  --color-panel: var(--panel);
+  --color-raise: var(--raise);
+  --color-border: var(--border);
+  --color-accent: var(--ac);
+  --font-sans: var(--font-ui);
+  --font-mono: var(--font-mono);
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body,
+#root {
+  height: 100%;
+}
+
+body {
+  margin: 0;
+  font-family: var(--font-ui);
+  background: radial-gradient(120% 90% at 50% -10%, #232019 0%, #131210 60%, #0e0d0b 100%);
+  color: var(--ink);
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+::selection {
+  background: rgba(var(--ac-rgb), 0.3);
+}
+
+.tnum {
+  font-variant-numeric: tabular-nums;
+}
+
+.scroll {
+  scrollbar-width: thin;
+  scrollbar-color: #3a362f transparent;
+}
+
+.scroll::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+
+.scroll::-webkit-scrollbar-thumb {
+  background: #3a362f;
+  border-radius: 6px;
+  border: 2px solid transparent;
+  background-clip: padding-box;
+}
+
+.scroll::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+@keyframes fadeUp {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.enter {
+  animation: fadeUp 0.42s var(--ease) both;
+}
+
+.btn-press:active:not(:disabled) {
+  transform: scale(0.96);
+}

@@ -15,3 +15,10 @@
 __pycache__/
 *.pyc
 
+# Local Python venv for the FastAPI dev server
+.venv/
+
+# Node / pnpm
+node_modules/
+.pnpm-store/
+apps/web/dist/

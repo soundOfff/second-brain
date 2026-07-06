@@ -1,0 +1,18 @@
+{
+  "name": "second-brain",
+  "private": true,
+  "version": "0.1.0",
+  "description": "LLM-maintained wiki with a React web app monorepo",
+  "packageManager": "pnpm@10.15.1",
+  "scripts": {
+    "dev": "concurrently -n api,web -c cyan,magenta \"pnpm dev:api\" \"pnpm dev:web\"",
+    "dev:web": "pnpm --filter @second-brain/web dev",
+    "dev:api": "bash bin/brain-api.sh",
+    "build": "pnpm --filter @second-brain/web build",
+    "lint": "pnpm --filter @second-brain/web lint",
+    "typecheck": "pnpm -r --if-present typecheck"
+  },
+  "devDependencies": {
+    "concurrently": "^9.1.0"
+  }
+}

@@ -715,3 +715,22 @@ Turns capture from push-only into pull: the brain now feeds itself unattended.
     zsh backtick-in-"${…}" parse error; (LOW) compute the model once; (LOW) unified the
     top-nav tab sizing (bar 40→48) with the in-card tabs; added a negation/number guard
     to the transcript prompt.
+
+## 2026-07-06 — feat: React web monorepo (continued from handoff)
+
+- **Command:** interactive session · "take the last handoff and continue".
+- **Unblocked deps.** Created `.venv/` (PEP 668-safe); `pnpm install` + pip install
+  fastapi/uvicorn/httpx/pytest. Fixed `apps/api/paths.py` to import `brain_feed_items`
+  on boot so route modules can `import brain_feed`.
+- **API verified.** Smoke-tested `/api/health`, `/api/review/queue?demo=1`,
+  `/api/settings`, `/api/wiki/pages`. Added `bin/brain-api.sh` (uvicorn :8787) and
+  `bin/brain-web.sh` (`pnpm dev` wrapper). Six new tests in `bin/tests/test_brain_api.py`
+  — all green.
+- **Frontend shipped (v1).** Built `apps/web/src/` — amber dark theme tokens in
+  `index.css`, `AppShell` with macOS titlebar + tab nav, `useBrainShortcuts` hook,
+  Review Queue (sidebar rail, recap/graph toggle, keep/drop/skip/undo + demo mode),
+  Feed Stats (table + run-feeder polling + new-source form), Settings (cap/model/
+  appearance), Wiki browser (sidebar nav, wikilink/citation renderer, source viewer).
+  `pnpm typecheck` + `pnpm build` green.
+- **notes:** Tk GUI + `brain-serve.py` unchanged (still functional). README /
+  `docs/external-tools.md` not updated yet — follow-up for Phase 4 polish.
