@@ -1,61 +1,76 @@
 ---
 type: recap
-title: "Recap — Run parallel sessions with worktrees (Claude Code docs)"
-created: 2026-06-26
-updated: 2026-06-26
+title: "Recap — Run parallel sessions with worktrees (Claude Code Docs)"
+created: 2026-07-25
+updated: 2026-07-25
 status: stable
 sources: [2026-06-24-run-parallel-sessions-with-worktrees-claude-code-docs]
-tags: [claude-code, git, worktrees, agentic-coding, docs]
+tags: [claude-code, git, worktrees, documentation, dev-tools]
 ---
 
-# Recap — Run parallel sessions with worktrees (Claude Code docs)
+# Recap — Run parallel sessions with worktrees (Claude Code Docs)
 
-Official [[entities/claude-code]] documentation on using
-[[concepts/git-worktrees]] to run multiple isolated sessions in parallel
-[2026-06-24-run-parallel-sessions-with-worktrees-claude-code-docs].
+Official **[[entities/claude-code]]** documentation explaining how git
+**[[concepts/git-worktrees]]** are used to run multiple isolated Claude Code sessions in
+parallel against the same repository without their file edits colliding
+[2026-06-24-run-parallel-sessions-with-worktrees-claude-code-docs]. `claude --worktree
+<name>` creates an isolated worktree (default location `.claude/worktrees/<value>/`, new
+branch `worktree-<value>`) and starts a session in it; omitting a name auto-generates one;
+Claude can also be asked mid-session to "work in a worktree," which invokes the
+`EnterWorktree` tool [2026-06-24-run-parallel-sessions-with-worktrees-claude-code-docs].
+Worktrees branch from the repo's default remote branch (`origin/HEAD`) unless
+`worktree.baseRef` is set to `"head"`, and a worktree can also be created directly from a
+GitHub PR number or URL [2026-06-24-run-parallel-sessions-with-worktrees-claude-code-docs].
+
+A `.worktreeinclude` file (gitignore syntax) copies specified gitignored files (e.g.
+`.env`, `config/secrets.json`) into every new worktree, since a worktree is a fresh
+checkout that otherwise lacks untracked local files
+[2026-06-24-run-parallel-sessions-with-worktrees-claude-code-docs]. Subagents can be
+isolated in their own worktrees too — either by asking Claude to "use worktrees for your
+agents" or by setting `isolation: worktree` in a custom subagent's frontmatter — and such
+worktrees are removed automatically once the subagent finishes without changes
+[2026-06-24-run-parallel-sessions-with-worktrees-claude-code-docs]. Cleanup behavior on
+exit depends on whether changes were made: clean worktrees are auto-removed, dirty ones
+prompt to keep or discard; non-interactive (`-p`) runs are never auto-cleaned and must be
+removed manually with `git worktree remove`
+[2026-06-24-run-parallel-sessions-with-worktrees-claude-code-docs]. Background/subagent
+worktrees age out automatically past a configurable `cleanupPeriodDays` if they have no
+uncommitted changes, and Claude runs `git worktree lock` on a worktree while an agent is
+actively using it to prevent concurrent cleanup from removing it
+[2026-06-24-run-parallel-sessions-with-worktrees-claude-code-docs]. For non-git version
+control systems, `WorktreeCreate`/`WorktreeRemove` hooks can fully replace the default git
+logic [2026-06-24-run-parallel-sessions-with-worktrees-claude-code-docs].
 
 ## Key claims
 
-- A git worktree is a separate working directory with its own files and branch sharing
-  the same repo history/remote. Running each session in its own worktree means edits in
-  one never touch another — e.g. building a feature in one terminal while fixing a bug
-  in a second [2026-06-24-run-parallel-sessions-with-worktrees-claude-code-docs].
-- **Start one:** `claude --worktree <name>` (or `-w`) creates a worktree under
-  `.claude/worktrees/<name>/` on branch `worktree-<name>`; omit the name to auto-generate
-  one. The desktop app makes a worktree for every new session automatically
+- `claude --worktree <name>` creates an isolated git worktree under
+  `.claude/worktrees/<value>/` on a new branch `worktree-<value>` and starts a session
+  there [2026-06-24-run-parallel-sessions-with-worktrees-claude-code-docs].
+- Worktrees branch from `origin/HEAD` by default; setting `worktree.baseRef` to `"head"`
+  makes new worktrees branch from local HEAD instead (only `"fresh"` or `"head"` are valid
+  values) [2026-06-24-run-parallel-sessions-with-worktrees-claude-code-docs].
+- A worktree can be created directly from a GitHub PR via `claude --worktree "#1234"`, at
+  `.claude/worktrees/pr-<number>` [2026-06-24-run-parallel-sessions-with-worktrees-claude-code-docs].
+- A `.worktreeinclude` file (gitignore syntax) copies specified gitignored files into every
+  new worktree; only files that are both matched and gitignored are copied
   [2026-06-24-run-parallel-sessions-with-worktrees-claude-code-docs].
-- Worktrees branch from the repo's **default branch** (`origin/HEAD`) by default; set
-  `worktree.baseRef: "head"` to carry unpushed commits. Branch from a PR with
-  `claude --worktree "#1234"` [2026-06-24-run-parallel-sessions-with-worktrees-claude-code-docs].
-- A `.worktreeinclude` file (gitignore syntax) copies gitignored files like `.env` into
-  new worktrees; tracked files are never duplicated
+- Custom subagents can set `isolation: worktree` in frontmatter to always run in an
+  isolated, auto-cleaned worktree [2026-06-24-run-parallel-sessions-with-worktrees-claude-code-docs].
+- Non-interactive runs (`claude -p --worktree`) are never auto-cleaned since there's no
+  exit prompt; they must be removed manually via `git worktree remove`
   [2026-06-24-run-parallel-sessions-with-worktrees-claude-code-docs].
-- **Subagent isolation:** add `isolation: worktree` to a custom subagent's frontmatter
-  (or ask Claude to "use worktrees for your agents") so parallel edits don't conflict;
-  each gets a temporary worktree removed automatically if it finishes without changes
+- Claude runs `git worktree lock` on a worktree while an agent is active in it, so the
+  periodic cleanup sweep (governed by `cleanupPeriodDays`) can't remove it mid-use
   [2026-06-24-run-parallel-sessions-with-worktrees-claude-code-docs].
-- **Cleanup:** clean worktrees (no changes/untracked/new commits) are auto-removed;
-  dirty ones prompt to keep or remove. Subagent/background worktrees are swept after
-  `cleanupPeriodDays`; `--worktree` ones are never swept. `git worktree remove` (with
-  `--force`) cleans up manually
-  [2026-06-24-run-parallel-sessions-with-worktrees-claude-code-docs].
-- **Non-git VCS** (SVN, Perforce, Mercurial) is supported via `WorktreeCreate` /
-  `WorktreeRemove` hooks
-  [2026-06-24-run-parallel-sessions-with-worktrees-claude-code-docs].
-
-Worktrees isolate **file edits**; subagents and agent teams coordinate the **work** —
-together a building block of [[concepts/agentic-engineering]]
-[2026-06-24-run-parallel-sessions-with-worktrees-claude-code-docs].
 
 ## Entities mentioned
 
-- [[entities/claude-code]] (incl. Anthropic — see [[entities/anthropic]])
+- [[entities/claude-code]]
 
 ## Concepts mentioned
 
-- [[concepts/git-worktrees]], [[concepts/agentic-engineering]]
+- [[concepts/git-worktrees]]
 
 ## Source
 
-`sources/2026-06-24-run-parallel-sessions-with-worktrees-claude-code-docs.md` —
-official docs page (code.claude.com/docs/en/worktrees).
+`sources/2026-06-24-run-parallel-sessions-with-worktrees-claude-code-docs.md`

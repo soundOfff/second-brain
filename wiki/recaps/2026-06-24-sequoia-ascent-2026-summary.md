@@ -1,103 +1,115 @@
 ---
 type: recap
-title: "Recap — Sequoia Ascent 2026: Software 3.0, Agentic Engineering, Jagged Intelligence"
-created: 2026-06-26
-updated: 2026-06-26
+title: "Recap — Sequoia Ascent 2026 Summary"
+created: 2026-07-25
+updated: 2026-07-25
 status: stable
 sources: [2026-06-24-sequoia-ascent-2026-summary]
-tags: [llm, agentic-coding, software-3-0, verifiability, ai]
+tags: [ai, agentic-engineering, software-3-0, karpathy, essay]
 ---
 
-# Recap — Sequoia Ascent 2026 (Karpathy × Stephanie Zhan)
+# Recap — Sequoia Ascent 2026 Summary
 
-A fireside chat by [[entities/andrej-karpathy]] with Stephanie Zhan at
-[[entities/sequoia-capital]]'s Ascent 2026 (30 Apr 2026). The source bundles an
-AI-generated summary **and** a cleaned-up transcript that Karpathy himself produced by
-feeding a top model (Codex 5.5) his blog/tweets plus the video transcript — itself an
-example of the [[concepts/llm-gui]] / agent-native-content idea
+An AI-generated summary and cleaned transcript of a fireside chat between
+**[[entities/andrej-karpathy]]** and Sequoia's **[[entities/stephanie-zhan]]** at
+**[[entities/sequoia-capital]]**'s Ascent 2026 event. Karpathy himself notes the summary
+and transcript were produced by feeding an LLM his blog posts/tweets plus the talk's
+transcript, then cleaning it up with a "top capability model" (Codex 5.5)
+[2026-06-24-sequoia-ascent-2026-summary]. The talk argues that December 2025 marked an
+"agentic inflection point" after which coding agents like **[[entities/claude-code]]**
+and **[[entities/codex]]** began producing large, coherent, trustworthy chunks of work
+without frequent correction, shifting programming from writing lines of code to
+delegating "macro actions" to agents [2026-06-24-sequoia-ascent-2026-summary].
+
+Karpathy frames this as **[[concepts/software-3-0]]**: Software 1.0 is explicit code,
+Software 2.0 is learned weights/datasets, and Software 3.0 is programming LLMs via
+prompts, context, tools, and instructions, with the context window as the main lever
+[2026-06-24-sequoia-ascent-2026-summary]. He illustrates this with his **MenuGen**
+project — a traditional app (OCR, image generation, auth, payments) that in a
+"Software 3.0" version collapses into a single multimodal-model call that overlays
+dish images directly onto a photographed menu, implying some apps "should stop existing
+as apps" [2026-06-24-sequoia-ascent-2026-summary]. He also cites his own
+**[[concepts/llm-wiki]]** project (used as the design pattern for this very second-brain
+repository) as an example of an information transformation — compiling messy documents
+into a persistent, cross-linked wiki — that was not possible with classical software
+[2026-06-24-sequoia-ascent-2026-summary].
+
+Two recurring frameworks structure the talk. First, **[[concepts/verifiability]]**:
+"traditional software automates what you can specify; LLMs and RL automate what you can
+verify" — capability spikes where a task is verifiable *and* labs have devoted training
+attention to it (his example: chess improved sharply from GPT-3.5 to GPT-4 largely
+because more chess data entered the training mix, not just general capability growth)
+[2026-06-24-sequoia-ascent-2026-summary]. This produces **[[concepts/jagged-intelligence]]**
+— models that can refactor 100k-line codebases yet answer confidently wrong on trivial
+tasks (e.g., recommending walking a 50-meter "drive vs. walk" question)
+[2026-06-24-sequoia-ascent-2026-summary]. Second, he distinguishes **[[concepts/vibe-coding]]**
+(raises the floor — lets anyone build software by describing intent) from
+**[[concepts/agentic-engineering]]** (raises the ceiling — the professional discipline of
+supervising fallible agents while preserving correctness, security, and taste)
+[2026-06-24-sequoia-ascent-2026-summary]. His running example of an agent mistake is a
+MenuGen payment bug where an agent matched Stripe purchases to Google accounts by email
+address rather than persistent user ID — plausible code, bad system design
+[2026-06-24-sequoia-ascent-2026-summary].
+
+Other threads: his **[[concepts/animals-vs-ghosts]]** framing (LLMs are not
+animal-like intelligences with biological drives; they are "statistical simulation
+circuits" shaped by pretraining and RL, so they should be treated empirically rather
+than anthropomorphized) [2026-06-24-sequoia-ascent-2026-summary]; a call for
+**agent-native infrastructure** — docs, CLIs, APIs, and MCP servers built for agents
+rather than humans clicking through UIs, framed as "sensors and actuators"
+[2026-06-24-sequoia-ascent-2026-summary]; hiring advice to replace coding puzzles with
+"build and secure a real project with agents, then have adversarial agents try to break
+it" [2026-06-24-sequoia-ascent-2026-summary]; and a closing line he attributes to a tweet
+he liked: "You can outsource your thinking, but you can't outsource your understanding"
+— used to argue that human understanding remains the bottleneck for directing agents
+[2026-06-24-sequoia-ascent-2026-summary]. He also references his **microGPT** project (a
+dependency-free single-file GPT trainer/inference implementation) as an educational
+artifact, and notes he co-founded **[[entities/openai]]**, worked on Autopilot at
+**[[entities/tesla]]**, and founded **[[entities/eureka-labs]]**
 [2026-06-24-sequoia-ascent-2026-summary].
 
 ## Key claims
 
-1. **December 2025 was an agentic inflection point.** Generated chunks suddenly became
-   large, coherent, and reliable; Karpathy "started trusting the agents" and felt "more
-   behind as a programmer." The unit of programming shifted from typing lines to
-   delegating "macro actions" (implement a feature, refactor a subsystem, write+run
-   tests). The programmer becomes an **orchestrator of agents**
-   [2026-06-24-sequoia-ascent-2026-summary].
-2. **[[concepts/software-3-0]].** Software 1.0 = explicit code; 2.0 = learned weights;
-   3.0 = programming LLMs through prompts/context/tools. The **context window is the new
-   program** and the LLM is its interpreter. Example: an installer becomes a pasteable
-   block of instructions the agent adapts to your machine, instead of a brittle shell
-   script [2026-06-24-sequoia-ascent-2026-summary].
-3. **MenuGen / "software disappears."** MenuGen (photo of a menu → OCR → generated dish
-   images) needed a whole web stack; the Software 3.0 version just hands the photo to a
-   multimodal model that renders dishes onto the menu image directly. "Some apps should
-   stop existing as apps." Extrapolated: **neural computers** where the neural net is
-   the host process and CPUs are coprocessors [2026-06-24-sequoia-ascent-2026-summary].
-4. **The new opportunity is not just faster coding.** LLMs make previously
-   non-programmable information transformations possible — his
-   [[concepts/llm-wiki]] knowledge-base pattern is the clearest example: an agent
-   incrementally compiles messy sources into a persistent wiki, which no classical
-   program could robustly do. Ask "what was impossible before but is now natural?"
-   [2026-06-24-sequoia-ascent-2026-summary].
-5. **[[concepts/verifiability]].** Traditional software automates what you can
-   *specify*; LLMs/RL automate what you can *verify*. Tasks with automatic
-   reward/success signals (math, code, tests, games) improve fastest — which is why
-   coding agents feel far better than ordinary chatbots
-   [2026-06-24-sequoia-ascent-2026-summary].
-6. **Jagged intelligence has two axes.** Capability ≈ verifiability × training
-   attention × data coverage × economic value. Chess improved partly because more chess
-   data was added, not just from general progress. Frontier models "have no manual";
-   the founder question is "are you on the model's rails?" See
-   [[concepts/jagged-intelligence]] [2026-06-24-sequoia-ascent-2026-summary].
-7. **Vibe coding vs. [[concepts/agentic-engineering]].** [[concepts/vibe-coding]] raises
-   the floor (anyone can build); agentic engineering raises the ceiling (the discipline
-   of coordinating fallible agents while preserving correctness, security, taste). The
-   MenuGen payment bug — matching Stripe and Google emails instead of using persistent
-   user IDs — shows why human system judgment is still required. The "10x engineer" may
-   become far more extreme [2026-06-24-sequoia-ascent-2026-summary].
-8. **Hiring should change.** Replace coding puzzles with "build a substantial project
-   with agents, deploy it, secure it, then have adversarial agents try to break it"
-   [2026-06-24-sequoia-ascent-2026-summary].
-9. **Founder wedge: valuable, verifiable, undertrained domains.** Where you can build an
-   RL environment with reliable rewards, you can fine-tune/RL even if the base model is
-   weak there. Coding/math are saturated by labs; latent verifiable structure elsewhere
-   is the opportunity [2026-06-24-sequoia-ascent-2026-summary].
-10. **[[concepts/agent-native-infrastructure]].** Most software is built for humans
-    clicking screens, but increasingly the user is the human's agent. Products need
-    agent-native surfaces (markdown docs, CLIs, APIs, MCP servers, structured logs,
-    machine-readable schemas, safe permissioning, headless setup). Framed as "sensors
-    and actuators." Deploying MenuGen (Vercel, auth, payments, DNS, secrets) was harder
-    than building it [2026-06-24-sequoia-ascent-2026-summary].
-11. **[[concepts/ghosts-vs-animals]].** LLMs aren't animals (no biological drives); they
-    are statistical simulations of human artifacts. Anthropomorphic expectations
-    mislead. Right posture: empirical familiarity + guardrails
-    [2026-06-24-sequoia-ascent-2026-summary].
-12. **Education: outsource thinking, not understanding.** "You can outsource your
-    thinking, but you can't outsource your understanding" — the human stays the
-    bottleneck for direction, taste, and knowing when a result is suspicious. LLM
-    knowledge bases and his single-file microGPT are tools for turning information into
-    understanding. See [[concepts/outsourcing-thinking-vs-understanding]]
-    [2026-06-24-sequoia-ascent-2026-summary].
+- Karpathy says he "never felt more behind as a programmer," dating a step-change in
+  agent reliability to around December 2025 [2026-06-24-sequoia-ascent-2026-summary].
+- Proposed automation formula: `capability spike ~= verifiability x training attention x
+  data coverage x economic value` [2026-06-24-sequoia-ascent-2026-summary].
+- MenuGen's "Software 3.0" version replaces an entire app stack (OCR, image gen, UI)
+  with a single multimodal prompt to overlay dish images onto a menu photo
+  [2026-06-24-sequoia-ascent-2026-summary].
+- Karpathy's [[concepts/llm-wiki]] pattern compiles raw sources into a persistent
+  Markdown wiki (summaries, entity/concept pages, contradictions, cross-links) —
+  something no classical program could robustly do [2026-06-24-sequoia-ascent-2026-summary].
+- Vibe coding raises the floor of who can build software; agentic engineering raises the
+  ceiling of professional-grade output while using agents
+  [2026-06-24-sequoia-ascent-2026-summary].
+- Proposed hiring test: have a candidate build and secure a real project with agents,
+  then have adversarial agents try to break it, instead of algorithmic puzzles
+  [2026-06-24-sequoia-ascent-2026-summary].
+- Chess capability jumps from GPT-3.5 to GPT-4 are attributed (per Karpathy) to
+  increased chess data in the pretraining mix, not pure general-intelligence gains
+  [2026-06-24-sequoia-ascent-2026-summary].
+- The "drive vs. walk 50 meters" and (patched) "letters in strawberry" examples are cited
+  as evidence of jagged intelligence in otherwise highly capable frontier models
+  [2026-06-24-sequoia-ascent-2026-summary].
+- Karpathy's Animals vs. Ghosts framing: LLMs lack biological drives/curiosity and should
+  be treated as jagged, alien statistical tools, not anthropomorphized
+  [2026-06-24-sequoia-ascent-2026-summary].
+- Quoted aphorism (from a tweet Karpathy liked): "You can outsource your thinking, but
+  you can't outsource your understanding" [2026-06-24-sequoia-ascent-2026-summary].
 
 ## Entities mentioned
 
-- [[entities/andrej-karpathy]], [[entities/sequoia-capital]] (Stephanie Zhan,
-  interviewer), [[entities/claude-code]], [[entities/codex]], [[entities/openai]],
-  [[entities/cursor]], [[entities/google-gemini]] (Nano Banana). Karpathy's bio:
-  ex-Tesla Autopilot, OpenAI co-founder, founder of Eureka Labs.
+- [[entities/andrej-karpathy]], [[entities/stephanie-zhan]], [[entities/sequoia-capital]],
+  [[entities/openai]], [[entities/tesla]], [[entities/claude-code]], [[entities/codex]],
+  [[entities/menugen]], [[entities/microgpt]], [[entities/eureka-labs]]
 
 ## Concepts mentioned
 
-- [[concepts/software-3-0]], [[concepts/verifiability]],
-  [[concepts/jagged-intelligence]], [[concepts/agentic-engineering]],
-  [[concepts/vibe-coding]], [[concepts/agent-native-infrastructure]],
-  [[concepts/ghosts-vs-animals]], [[concepts/llm-wiki]], [[concepts/llm-gui]],
-  [[concepts/outsourcing-thinking-vs-understanding]],
-  [[concepts/reinforcement-learning-from-verifiable-rewards]]
+- [[concepts/software-3-0]], [[concepts/vibe-coding]], [[concepts/agentic-engineering]],
+  [[concepts/verifiability]], [[concepts/jagged-intelligence]],
+  [[concepts/animals-vs-ghosts]], [[concepts/llm-wiki]]
 
 ## Source
 
-`sources/2026-06-24-sequoia-ascent-2026-summary.md` — fireside chat write-up + edited
-transcript, 30 Apr 2026 (captured via the `andrej-karpathy` feed).
+`sources/2026-06-24-sequoia-ascent-2026-summary.md`

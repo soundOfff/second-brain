@@ -1,43 +1,42 @@
 ---
 type: recap
-title: "Recap — Quoting Tom MacWright on accidental anonymity"
-created: 2026-06-26
-updated: 2026-06-26
+title: "Recap — Quoting Tom MacWright"
+created: 2026-07-25
+updated: 2026-07-25
 status: stable
 sources: [2026-06-24-quoting-tom-macwright]
-tags: [ai, careers, authenticity, ai-misuse]
+tags: [ai, ai-generated-content, careers, authenticity]
 ---
 
-# Recap — Quoting Tom MacWright on accidental anonymity
+# Recap — Quoting Tom MacWright
 
-A quotation collected by [[entities/simon-willison]] from
-[[entities/tom-macwright]]'s post "Accidental anonymity"
-[2026-06-24-quoting-tom-macwright].
+**[[entities/simon-willison]]** quotes **[[entities/tom-macwright]]**'s piece
+"Accidental anonymity": job applications increasingly arrive co-written by an LLM,
+linking to an LLM-generated portfolio site, linking in turn to LLM-generated GitHub
+projects with LLM-generated commit messages [2026-06-24-quoting-tom-macwright].
+MacWright's point, as quoted: the resulting "perfected, generated, prompted resume" is
+generic and impersonal — it reveals nothing about the candidate as a person beyond
+"that they use particular tools," leaving the reviewer knowing nothing true about who
+they actually are [2026-06-24-quoting-tom-macwright]. This is MacWright's observation/
+opinion, relayed by Willison as a short quotation post.
 
 ## Key claims
 
-- MacWright reports seeing job applications "clearly cowritten by an LLM," linking to an
-  LLM-generated portfolio, which links to LLM-generated GitHub projects with
-  LLM-generated commit messages [2026-06-24-quoting-tom-macwright].
-- His reaction: "I don't know anything about these people." They "haven't put themselves
-  out there… haven't said anything true" [2026-06-24-quoting-tom-macwright].
-- "The perfected, generated, prompted resume is generic and impersonal. It tells me
-  nothing about this person, other than that they use particular tools"
+- MacWright observes a pattern of job applications, portfolio sites, GitHub projects,
+  and commit messages that are all LLM-generated end-to-end
   [2026-06-24-quoting-tom-macwright].
-
-The throughline: fully AI-generated self-presentation erases the signal it was meant to
-convey — see [[concepts/ai-slop]]. It pairs with Karpathy's point that you can outsource
-thinking but not understanding ([[concepts/outsourcing-thinking-vs-understanding]]).
+- His central complaint (opinion): such fully-generated application materials convey
+  nothing genuine about the applicant as a person, only that they used certain tools
+  [2026-06-24-quoting-tom-macwright].
 
 ## Entities mentioned
 
-- [[entities/tom-macwright]] (quoted), [[entities/simon-willison]] (collector)
+- [[entities/tom-macwright]], [[entities/simon-willison]]
 
 ## Concepts mentioned
 
-- [[concepts/ai-slop]], [[concepts/outsourcing-thinking-vs-understanding]]
+- [[concepts/ai-generated-content]]
 
 ## Source
 
-`sources/2026-06-24-quoting-tom-macwright.md` — quotation, 24 Jun 2026 (captured via the
-`simon-willison` feed). Original: Tom MacWright, "Accidental anonymity."
+`sources/2026-06-24-quoting-tom-macwright.md`
