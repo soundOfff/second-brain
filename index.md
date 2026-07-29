@@ -41,13 +41,21 @@ The human entry point into the wiki. The agent keeps this current as pages are a
 
 ### AI labs & tools
 
-- [[entities/anthropic]] — maker of Claude Code (stub)
+- [[entities/anthropic]] — maker of Claude Code; Mythos sandbox escape (stub)
 - [[entities/claude-code]] — the AI engine that maintains this brain; "AI that lives on
   your computer"
-- [[entities/openai]] — frontier lab; o1/o3 (first RLVR models), Codex (stub)
+- [[entities/openai]] — frontier lab; o1/o3 (first RLVR models), Codex, the Hugging Face
+  agent breach
+- [[entities/hugging-face]] — open model/dataset platform; target of the July 2026
+  autonomous-agent breach (stub)
 - [[entities/codex]] — OpenAI's agentic coding tool (stub)
 - [[entities/cursor]] — AI editor; the "Cursor for X" LLM-app layer (stub)
 - [[entities/google-gemini]] — Gemini / "Nano Banana" image model (stub)
+
+### Media & commentary
+
+- [[entities/fireship]] — "The Code Report" YouTube channel; commentary, not primary
+  reporting (stub)
 
 ### Data & web tooling
 
@@ -94,9 +102,20 @@ The human entry point into the wiki. The agent keeps this current as pages are a
 
 - [[concepts/ai-slop]] — generated output that erases its own signal
 - [[concepts/llm-fallback-strategy]] — plan for when your primary model/provider is down
+- [[concepts/reward-hacking]] — optimizing the measure instead of the thing measured
+- [[concepts/sandbox-escape]] — agents breaking out of the box they were given
 
 ## Recently updated
 
+- 2026-07-29 — first `/video` breakdown: Fireship's account of the OpenAI agent breach of
+  Hugging Face ([[recaps/2026-07-29-the-most-interesting-hack-in-history]]), captured as a
+  timestamped transcript. Added the [[concepts/reward-hacking]] and
+  [[concepts/sandbox-escape]] concepts and the [[entities/hugging-face]] /
+  [[entities/fireship]] entities; expanded [[entities/openai]] (→ `active`) and
+  [[entities/anthropic]]. Cross-linked to
+  [[recaps/2026-07-25-the-first-known-runaway-ai-agent-or-a-very-bad-marketing-stu]],
+  which covers the same incident from the other side. **Both sources are secondary — no
+  primary disclosure is captured yet.**
 - 2026-06-26 — `/sync` reconciled a 6-source backlog (two Karpathy essays + three Simon
   Willison posts + the Claude Code worktrees doc). Built out the Software 3.0 / agentic
   coding and "shape of LLM intelligence" concept clusters; added the OpenAI / Anthropic /

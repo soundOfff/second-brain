@@ -772,3 +772,67 @@ Turns capture from push-only into pull: the brain now feeds itself unattended.
   `pnpm typecheck` + `pnpm build` green.
 - **notes:** Tk GUI + `brain-serve.py` unchanged (still functional). README /
   `docs/external-tools.md` not updated yet — follow-up for Phase 4 polish.
+
+## 2026-07-29 — feat: /video breakdown skill + first run (Fireship / Hugging Face breach)
+
+- **Command:** interactive session · "take a look and try the youtube video feature? I want
+  a tool that analizes and desglose an entire yt video."
+- **Root cause found in the EXISTING youtube path.** `brain-clip.sh` fetched captions and
+  metadata in a single `yt-dlp` call using `--sub-langs "en.*"`, which greedily downloads
+  every English variant (`en`, `en-en`, `en-de`). YouTube returns **HTTP 429** partway and
+  the error aborted the run *before* `--write-info-json` landed — so title/uploader were
+  silently lost and the slug degraded to the useless host (`www-youtube-com`). This is the
+  same garbage the 2026-07-06 entry attributed to "yt-dlp not installed"; that diagnosis
+  was incomplete — yt-dlp 2026.07.04 is installed and the throttling was the real cause.
+- **Fix (`bin/brain-clip.sh`).** Split into two passes: metadata alone first (so a
+  throttled caption can never cost the metadata), then captions requested narrowly
+  (`--sub-langs "en"`, one request) and widened to `en.*` only if nothing landed. Verified
+  on a 19s video: `id: 2026-07-29-me-at-the-zoo`, `title: "Me at the zoo"`, `author: jawed`,
+  no 429.
+- **New `bin/brain_video.py`.** The old `vtt_to_text()` discards every timestamp, which is
+  why a video could only ever be summarized, not broken down. The new extractor keeps the
+  clock: metadata, the uploader's chapters, and caption cues merged into ~45s blocks (
+  `--block-seconds` tunable), each carrying a deep link to the exact second. Also repairs
+  the rolling-window duplication auto-captions produce (each cue restates the previous
+  tail; a naive append triples the transcript). Stdlib only; `--json` / `--markdown`.
+- **New `/video` skill** (`.claude/skills/video/SKILL.md`). `/capture`'s deeper sibling:
+  deposits the timestamped transcript as the immutable source, then writes a
+  section-by-section breakdown (structure table, per-section analysis, key claims and
+  quotes each pinned to a timestamp) and runs the normal ripple. Explicit guidance to
+  never invent when captions are unclear, never silently "fix" a name/number/negation, and
+  to chunk long videos rather than quietly stopping halfway.
+- **Tests.** `bin/tests/test_video.py` — 26 offline tests (URL spoof rejection, hms, deep
+  links, VTT parsing, rolling-dedupe repair incl. a distant-repetition guard, cue merging,
+  rendering). Full suite **136 passed** in `.venv`. (`python3 -m unittest` alone errors on
+  `test_brain_api.py`, which needs pytest — pre-existing, unrelated.)
+- **First real run — sources:** `2026-07-29-the-most-interesting-hack-in-history`
+  (Fireship, "The Code Report", 4:33, 2026-07-23; uploader-provided captions, 141 cues → 6
+  segments at `--block-seconds 30`).
+- **recaps:** `2026-07-29-the-most-interesting-hack-in-history` — full breakdown, covers
+  0:00–4:33 including the sponsor read.
+- **wiki — created (4):** `entities/hugging-face` (resolves a link that was dangling from
+  the 2026-07-25 Willison recap), `entities/fireship`, `concepts/reward-hacking`,
+  `concepts/sandbox-escape`.
+- **wiki — updated (3):** `entities/openai` (stub → **active**; the breach, Exploit Gym,
+  two further long-horizon incidents), `entities/anthropic` (Mythos April escape),
+  `recaps/2026-07-25-the-first-known-runaway-ai-agent-…` (stub → active; cross-linked —
+  that recap explicitly said the incident "is not detailed in this source", and this video
+  is exactly the missing detail).
+- **index:** added Hugging Face + a Media & commentary section (Fireship), the two new
+  concepts, and a 2026-07-29 "Recently updated" entry.
+- **notes / non-obvious:**
+  - **Two independent sources, same incident, same unresolved fork.** Fireship lands on
+    "the world's most interesting hack or the most effective marketing stunt"; Willison's
+    headline asks "runaway AI agent - or a very bad marketing stunt?". Recorded as an open
+    question on both pages rather than picked. They are complementary: Willison explains
+    why the breach plausibly went *unnoticed* (benchmark scale), the video explains what it
+    *was*.
+  - **No primary source captured.** Both accounts are secondary commentary; neither
+    OpenAI's nor Hugging Face's own disclosure is in the brain. Flagged on every page that
+    carries these claims — worth a `/capture` of the primary disclosures.
+  - **Two caption phrases left uncorrected and flagged**, per the skill's own rule: "the
+    most **Firesheep** coded story" (likely "Fireship-coded", but Firesheep was also a real
+    2010 session-hijacking tool, so the pun may be intended) and "GPT-5.6 **Soul**"
+    (GPT-5.6 is corroborated elsewhere in the brain; "Soul" is not).
+  - Video content claims (guardrail-forced pivot to Chinese models, 1,000+ actions, April
+    Mythos timeline) are unsourced *within the video* and marked as such.

@@ -309,13 +309,31 @@ if [[ "$ARG" == (http|https)://* ]]; then
   # --- video: pull the auto/uploaded captions, flatten to prose -------------
   deftype=transcript
   tdir="$(mktemp -d)"
-  # captions + metadata in one pass; --no-playlist so a stray ?list= can't drag in a
-  # whole playlist. A non-zero exit (e.g. no subs) is non-fatal: parse whatever landed.
+  # TWO passes, deliberately. Metadata first, on its own: YouTube rate-limits caption
+  # requests (HTTP 429) once a video carries several `en*` variants, and a combined call
+  # aborts on that error BEFORE --write-info-json lands — which silently cost us the
+  # title/uploader and degraded the slug to the useless host (`www-youtube-com`).
+  # Fetching the info.json separately means a throttled caption never loses the metadata.
   yt-dlp -q --no-warnings --no-playlist --skip-download \
-    --write-auto-subs --write-subs --sub-langs "en.*" --sub-format vtt \
     --write-info-json --socket-timeout 30 \
     -o "$tdir/%(id)s.%(ext)s" "$URLV" >/dev/null 2>&1 \
-    || print -u2 "$SELF: note — yt-dlp exited non-zero for '$URLV'; parsing whatever it fetched."
+    || print -u2 "$SELF: note — yt-dlp could not fetch metadata for '$URLV'."
+
+  # Captions second. `en` exact keeps us to ONE request in the common case; only if that
+  # lands nothing do we widen to every en* variant (auto-translations included). The
+  # parser reads a single vtt anyway, so the narrow try is both cheaper and 429-safer.
+  yt-dlp -q --no-warnings --no-playlist --skip-download \
+    --write-auto-subs --write-subs --sub-langs "en" --sub-format vtt \
+    --socket-timeout 30 \
+    -o "$tdir/%(id)s.%(ext)s" "$URLV" >/dev/null 2>&1 || true
+  vtt_found=("$tdir"/*.vtt(N))
+  if (( ${#vtt_found} == 0 )); then
+    yt-dlp -q --no-warnings --no-playlist --skip-download \
+      --write-auto-subs --write-subs --sub-langs "en.*" --sub-format vtt \
+      --socket-timeout 30 \
+      -o "$tdir/%(id)s.%(ext)s" "$URLV" >/dev/null 2>&1 \
+      || print -u2 "$SELF: note — yt-dlp exited non-zero fetching captions for '$URLV'; parsing whatever it fetched."
+  fi
 
   python3 - "$tdir" "$URLV" > "$outf" <<'PY'
 import sys, re, os, json, glob
