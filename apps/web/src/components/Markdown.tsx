@@ -173,21 +173,17 @@ function parseBlocks(body: string): Block[] {
 
     if (UL.test(line)) {
       flush();
-      const items: string[] = [];
-      while (i < lines.length && UL.test(lines[i]))
-        items.push(UL.exec(lines[i++])![1]);
-      i--;
-      blocks.push({ kind: "ul", items });
+      const list = collectItems(lines, i, UL);
+      i = list.last;
+      blocks.push({ kind: "ul", items: list.items });
       continue;
     }
 
     if (OL.test(line)) {
       flush();
-      const items: string[] = [];
-      while (i < lines.length && OL.test(lines[i]))
-        items.push(OL.exec(lines[i++])![1]);
-      i--;
-      blocks.push({ kind: "ol", items });
+      const list = collectItems(lines, i, OL);
+      i = list.last;
+      blocks.push({ kind: "ol", items: list.items });
       continue;
     }
 
@@ -197,6 +193,34 @@ function parseBlocks(body: string): Block[] {
 
   flush();
   return blocks;
+}
+
+/**
+ * Collect one list's items starting at `start`, returning the index of its last
+ * line. Wiki bodies hard-wrap inside an item, and the wrapped remainder is
+ * indented — absorb it into the item above, otherwise it ends the list and the
+ * next item restarts the numbering at 1. Indentation is required: clipped
+ * article bodies have no blank lines at all, so lazy (unindented) continuation
+ * would swallow the rest of the article into one bullet. A nested `- ` item
+ * becomes a flat sibling; this renderer has no nested-list block.
+ */
+function collectItems(lines: string[], start: number, marker: RegExp) {
+  const items: string[] = [];
+  let i = start;
+  for (; i < lines.length; i++) {
+    const trimmed = lines[i].trim();
+    if (!trimmed) break;
+    const item = marker.exec(trimmed);
+    if (item) {
+      items.push(item[1]);
+      continue;
+    }
+    const continues =
+      items.length && /^\s/.test(lines[i]) && !HEADING.test(trimmed);
+    if (!continues) break;
+    items[items.length - 1] += ` ${trimmed}`;
+  }
+  return { items, last: i - 1 };
 }
 
 type Ctx = { cites: Map<string, number>; titles: Map<string, string> };
@@ -332,9 +356,11 @@ function renderInline(text: string, ctx: Ctx): ReactNode[] {
   const parts: ReactNode[] = [];
   let last = 0;
   let m: RegExpExecArray | null;
-  INLINE.lastIndex = 0;
+  // a fresh instance per call: bold/italic recurse, and a shared lastIndex
+  // would leave the outer scan mid-string
+  const inline = new RegExp(INLINE.source, "g");
 
-  while ((m = INLINE.exec(text)) !== null) {
+  while ((m = inline.exec(text)) !== null) {
     if (m.index > last) parts.push(text.slice(last, m.index));
     const k = m.index;
 
@@ -353,11 +379,13 @@ function renderInline(text: string, ctx: Ctx): ReactNode[] {
           key={`${k}-b`}
           className="font-semibold text-[var(--ink-bright)]"
         >
-          {m[2]}
+          {renderInline(m[2], ctx)}
         </strong>,
       );
     } else if (m[3] !== undefined || m[4] !== undefined) {
-      parts.push(<em key={`${k}-i`}>{m[3] ?? m[4]}</em>);
+      parts.push(
+        <em key={`${k}-i`}>{renderInline(m[3] ?? m[4], ctx)}</em>,
+      );
     } else if (m[5] !== undefined) {
       parts.push(
         <a
