@@ -2,9 +2,9 @@
 type: concept
 title: Retrieval-Augmented Generation (RAG)
 created: 2026-06-23
-updated: 2026-06-23
+updated: 2026-06-26
 status: stub
-sources: [2026-06-23-karpathy-llm-wiki]
+sources: [2026-06-23-karpathy-llm-wiki, 2026-06-24-sequoia-ascent-2026-summary]
 tags: [llm, retrieval, method]
 aliases: [RAG]
 ---
@@ -20,5 +20,10 @@ The **[[concepts/llm-wiki]]** method is positioned as an alternative: precompute
 synthesis **once** into human-readable, cross-linked, auditable wiki pages, then update
 them incrementally rather than re-deriving per query [2026-06-23-karpathy-llm-wiki].
 
-> Stub — this page reflects only how one source (the LLM Wiki article) frames RAG.
-> Capture a dedicated source on RAG to flesh it out.
+Karpathy reinforces the contrast at Sequoia Ascent 2026: "instead of using
+retrieval-augmented generation to answer questions from raw documents each time, an agent
+incrementally compiles raw sources into a persistent Markdown wiki"
+[2026-06-24-sequoia-ascent-2026-summary]. See [[concepts/software-3-0]].
+
+> Stub — this page reflects only how the Karpathy sources frame RAG (always as the
+> query-time foil to the LLM Wiki). Capture a dedicated source on RAG to flesh it out.

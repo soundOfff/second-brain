@@ -2,9 +2,9 @@
 type: concept
 title: LLM Wiki
 created: 2026-06-23
-updated: 2026-06-23
+updated: 2026-06-26
 status: active
-sources: [2026-06-23-karpathy-llm-wiki]
+sources: [2026-06-23-karpathy-llm-wiki, 2026-06-24-sequoia-ascent-2026-summary]
 tags: [knowledge-management, llm, method, second-brain]
 aliases: [LLM-maintained wiki, AI-owned wiki]
 ---
@@ -49,6 +49,18 @@ Start fresh rather than migrating an old vault; don't hand-edit wiki pages (pres
 the agent's ownership/trust); lint weekly (contradictions compound); curate sources
 (bad inputs poison the base); budget ~5–15k tokens per capture
 [2026-06-23-karpathy-llm-wiki].
+
+## Why it's a Software 3.0 example
+
+In his Sequoia Ascent 2026 talk, [[entities/andrej-karpathy]] returns to the LLM Wiki /
+knowledge-base pattern as the clearest example of an information transformation that **no
+classical program could robustly do** but an LLM can — an agent incrementally compiling
+messy sources into a persistent markdown wiki (summaries, entity/concept pages,
+contradictions, cross-links, logs) [2026-06-24-sequoia-ascent-2026-summary]. It is an
+instance of [[concepts/software-3-0]], and he prizes it as a tool for
+[[concepts/outsourcing-thinking-vs-understanding|understanding]] ("synthetic data
+generation over fixed data"): "whenever I see a different projection onto information, I
+feel like I gain insight" [2026-06-24-sequoia-ascent-2026-summary].
 
 ## Implemented with
 
