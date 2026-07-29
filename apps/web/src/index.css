@@ -1,14 +1,17 @@
 @import "tailwindcss";
 
-/* ── base tokens (from bin/gui/review-queue/index.html) ── */
+/* ── base tokens ──────────────────────────────────────────────────────────
+   Warm-charcoal "terminal editorial" palette. Ink scale runs bright → faint;
+   surfaces run bg (deepest) → panel → sunk → raise → node (highest).       */
 :root {
   --ink: #ece8df;
   --ink-bright: #f5f1e8;
   --ink-muted: #b8b1a4;
   --ink-dim: #9a9384;
-  --ink-dim2: #8a8474;
-  --ink-faint: #7e786b;
-  --ink-fainter: #5a554c;
+  --ink-dim2: #8f8878;
+  /* faint/fainter bumped from #7e786b/#5a554c to clear 4.5:1 on --bg */
+  --ink-faint: #948d7e;
+  --ink-fainter: #8f8a7c;
   --hair: #4a443a;
   --bg: #1a1916;
   --panel: #1d1b17;
@@ -34,6 +37,8 @@
   --grail: var(--rail-neutral);
   --grail-w: 1px;
   --reason-bg: rgba(var(--ac-rgb), 0.12);
+
+  /* density-driven content rhythm */
   --side-pad: 16px 18px 12px;
   --head-pad: 22px 28px 16px;
   --title-size: 23px;
@@ -48,6 +53,12 @@
   --row-pt: 11px;
   --row-pb: 11px;
   --node-c: 22px;
+
+  /* app shell geometry */
+  --rail-w: 74px;
+  --topbar-h: 58px;
+  --panel-w: 302px;
+  --measure: 72ch;
 }
 
 :root[data-density="compact"] {
@@ -65,6 +76,7 @@
   --row-pt: 9px;
   --row-pb: 9px;
   --node-c: 20px;
+  --topbar-h: 50px;
 }
 
 :root[data-intensity="vivid"] {
@@ -104,14 +116,47 @@ body,
 body {
   margin: 0;
   font-family: var(--font-ui);
-  background: radial-gradient(120% 90% at 50% -10%, #232019 0%, #131210 60%, #0e0d0b 100%);
+  /* atmosphere anchored to the top-left rail rather than a floating window */
+  background:
+    radial-gradient(90% 60% at 12% -8%, rgba(var(--ac-rgb), 0.055) 0%, transparent 62%),
+    radial-gradient(120% 90% at 50% -20%, #211e18 0%, #17150f 55%, #131210 100%);
+  background-color: var(--bg);
   color: var(--ink);
   -webkit-font-smoothing: antialiased;
   text-rendering: optimizeLegibility;
+  overscroll-behavior: none;
 }
 
 ::selection {
   background: rgba(var(--ac-rgb), 0.3);
+}
+
+/* one consistent, visible focus ring everywhere */
+:where(a, button, input, textarea, select, summary, [tabindex]):focus-visible {
+  outline: 2px solid var(--ac);
+  outline-offset: 2px;
+  border-radius: 7px;
+}
+
+.skip-link {
+  position: fixed;
+  top: 10px;
+  left: 10px;
+  z-index: 90;
+  transform: translateY(-160%);
+  border-radius: 8px;
+  border: 1px solid var(--ac);
+  background: var(--ac);
+  color: var(--ac-on);
+  padding: 8px 14px;
+  font-family: var(--font-mono);
+  font-size: 12px;
+  font-weight: 600;
+  transition: transform 0.18s var(--ease);
+}
+
+.skip-link:focus {
+  transform: translateY(0);
 }
 
 .tnum {
@@ -121,6 +166,7 @@ body {
 .scroll {
   scrollbar-width: thin;
   scrollbar-color: #3a362f transparent;
+  scrollbar-gutter: stable;
 }
 
 .scroll::-webkit-scrollbar {
@@ -135,14 +181,171 @@ body {
   background-clip: padding-box;
 }
 
+.scroll::-webkit-scrollbar-thumb:hover {
+  background: #4a453c;
+  background-clip: padding-box;
+}
+
 .scroll::-webkit-scrollbar-track {
   background: transparent;
 }
 
+/* ── component primitives ─────────────────────────────────────────────── */
+@layer components {
+  .measure {
+    max-width: var(--measure);
+  }
+
+  .surface {
+    background: var(--raise);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+  }
+
+  .label {
+    font-family: var(--font-mono);
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--ink-faint);
+  }
+
+  .meta {
+    font-family: var(--font-mono);
+    font-size: 10.5px;
+    letter-spacing: 0.03em;
+    color: var(--ink-faint);
+  }
+
+  .pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    border-radius: 999px;
+    border: 1px solid var(--border);
+    background: var(--node);
+    padding: 3px 10px;
+    font-family: var(--font-mono);
+    font-size: 10.5px;
+    font-weight: 600;
+    color: var(--ink-muted);
+  }
+
+  .pill-accent {
+    border-color: rgba(var(--ac-rgb), 0.28);
+    background: rgba(var(--ac-rgb), 0.12);
+    color: var(--ac);
+  }
+
+  .btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    height: var(--btn-h);
+    padding: var(--btn-pad);
+    border-radius: 9px;
+    border: 1px solid var(--rail-neutral);
+    background: transparent;
+    color: var(--ink-muted);
+    font-family: var(--font-ui);
+    font-size: var(--btn-f);
+    font-weight: 600;
+    white-space: nowrap;
+    cursor: pointer;
+    transition:
+      border-color 0.16s var(--ease),
+      color 0.16s var(--ease),
+      background-color 0.16s var(--ease),
+      transform 0.1s var(--ease);
+  }
+
+  .btn:hover:not(:disabled) {
+    border-color: var(--hair);
+    background: rgba(255, 255, 255, 0.03);
+    color: var(--ink);
+  }
+
+  .btn:active:not(:disabled) {
+    transform: scale(0.97);
+  }
+
+  .btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+
+  .btn-accent {
+    border-color: var(--ac);
+    background: var(--ac);
+    color: var(--ac-on);
+  }
+
+  .btn-accent:hover:not(:disabled) {
+    border-color: var(--ac);
+    background: var(--ac);
+    color: var(--ac-on);
+    filter: brightness(1.1);
+  }
+
+  .btn-danger:hover:not(:disabled) {
+    border-color: var(--drop-border);
+    background: rgba(138, 90, 69, 0.14);
+    color: var(--drop-ink);
+  }
+
+  .btn-icon {
+    width: var(--btn-h);
+    padding: 0;
+  }
+
+  .field {
+    width: 100%;
+    border-radius: 8px;
+    border: 1px solid var(--border);
+    background: var(--bg);
+    padding: 8px 10px;
+    font-family: var(--font-mono);
+    font-size: 12px;
+    color: var(--ink);
+    outline: none;
+    transition:
+      border-color 0.16s var(--ease),
+      box-shadow 0.16s var(--ease);
+  }
+
+  .field::placeholder {
+    color: var(--ink-fainter);
+  }
+
+  .field:focus {
+    border-color: var(--ac);
+    box-shadow: 0 0 0 3px rgba(var(--ac-rgb), 0.14);
+    outline: none;
+  }
+
+  /* the recap slab picks up its accent rail from intensity, not from JS */
+  .recap-slab {
+    border-radius: 12px;
+    border: 1px solid var(--border);
+    background: var(--raise);
+    color: var(--recap-ink);
+    line-height: 1.7;
+    padding: var(--recap-pad);
+    font-size: var(--recap-size);
+  }
+
+  :root[data-intensity="vivid"] .recap-slab {
+    border-left: 3px solid var(--ac);
+  }
+}
+
+/* ── motion ───────────────────────────────────────────────────────────── */
 @keyframes fadeUp {
   from {
     opacity: 0;
-    transform: translateY(8px);
+    transform: translateY(7px);
   }
   to {
     opacity: 1;
@@ -150,10 +353,34 @@ body {
   }
 }
 
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
 .enter {
-  animation: fadeUp 0.42s var(--ease) both;
+  animation: fadeUp 0.28s var(--ease) both;
+}
+
+.enter-fade {
+  animation: fadeIn 0.2s var(--ease) both;
 }
 
 .btn-press:active:not(:disabled) {
   transform: scale(0.96);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+    scroll-behavior: auto !important;
+  }
 }

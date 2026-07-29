@@ -1,6 +1,6 @@
-import { Link } from "react-router-dom";
-import { useParams } from "react-router-dom";
+import { Link, useParams } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
+import { Lock } from "lucide-react";
 import { fetchSource } from "../../lib/api";
 
 export function SourceViewerPage() {
@@ -11,27 +11,47 @@ export function SourceViewerPage() {
     retry: false,
   });
 
-  if (isLoading) return <div className="p-6 text-[var(--ink-dim)]">Loading source…</div>;
+  if (isLoading) return <div className="p-8 text-[var(--ink-dim)]">Loading source…</div>;
+
   if (error || !data) {
-    return <div className="p-6 text-[var(--drop-ink)]">Source not found: {id}</div>;
+    return (
+      <div className="mx-auto w-full max-w-[720px] p-8">
+        <h2 className="text-lg font-semibold text-[var(--drop-ink)]">Source not found</h2>
+        <p className="meta mt-2 break-all">{id}</p>
+        <Link to="/wiki" className="btn mt-5">
+          Back to the map
+        </Link>
+      </div>
+    );
   }
 
   return (
-    <article className="p-6" style={{ padding: "var(--card-pad)" }}>
-      <header className="mb-4 border-b border-[var(--border-soft)] pb-3">
-        <h1 className="font-mono text-sm font-semibold text-[var(--ink-bright)]">{data.filename}</h1>
-        <p className="mt-1 font-mono text-[10px] text-[var(--ink-faint)]">immutable source · {data.id}</p>
+    <article className="mx-auto w-full max-w-[860px]" style={{ padding: "var(--card-pad)" }}>
+      <header className="mb-5 border-b border-[var(--border-soft)] pb-4">
+        <span className="pill mb-3">
+          <Lock className="h-3 w-3" aria-hidden="true" />
+          immutable source
+        </span>
+        <h2 className="font-mono text-[15px] font-semibold break-all text-[var(--ink-bright)]">
+          {data.filename}
+        </h2>
+        <p className="meta mt-1.5 break-all">{data.id}</p>
       </header>
-      <pre className="whitespace-pre-wrap rounded-lg border border-[var(--border)] bg-[var(--raise)] p-4 font-mono text-[12px] leading-relaxed text-[var(--recap-ink)]">
+
+      <pre className="scroll surface overflow-x-auto p-4 font-mono text-[12px] leading-relaxed whitespace-pre-wrap text-[var(--recap-ink)]">
         {data.raw}
       </pre>
+
       {data.citers.length ? (
-        <section className="mt-6">
-          <h2 className="mb-2 font-mono text-[10px] font-bold uppercase tracking-widest text-[var(--ink-faint)]">Cited by</h2>
-          <ul className="flex flex-col gap-1">
+        <section className="mt-7 border-t border-[var(--border-soft)] pt-5">
+          <h3 className="label mb-2.5">Cited by</h3>
+          <ul className="grid gap-1.5 sm:grid-cols-2">
             {data.citers.map((c) => (
               <li key={c.slug}>
-                <Link to={`/wiki/${c.slug}`} className="text-[13px] text-[var(--ac)] hover:underline">
+                <Link
+                  to={`/wiki/${c.slug}`}
+                  className="block truncate text-[13px] text-[var(--ink-muted)] hover:text-[var(--ac)] hover:underline"
+                >
                   {c.title}
                 </Link>
               </li>

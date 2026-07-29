@@ -1,7 +1,8 @@
 import { useEffect, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
-import type { NewFeedRequest } from "@second-brain/types";
+import { Play, Plus, X } from "lucide-react";
+import type { FeedStatsRow, NewFeedRequest } from "@second-brain/types";
 import {
   createWebpage,
   fetchFeedStats,
@@ -9,6 +10,7 @@ import {
   runFeeder,
   subscribeFeed,
 } from "../../lib/api";
+import { AppShell } from "../../components/AppShell";
 import { cn } from "../../lib/utils";
 
 type SourceKind = "webpage" | "rss" | "yt" | "api";
@@ -20,7 +22,9 @@ const BLURBS: Record<SourceKind, string> = {
   api: "Subscribe to a public JSON endpoint via a declarative mapping.",
 };
 
-export function FeedStatsPage({ demo: _demo }: { demo: boolean }) {
+const COLUMNS = ["Feed", "Adapter", "Trust", "Cap", "Seen", "Today", "Queued", "Keep-rate"] as const;
+
+export function FeedStatsPage() {
   const { data, isLoading, refetch } = useQuery({
     queryKey: ["feedStats"],
     queryFn: fetchFeedStats,
@@ -67,39 +71,73 @@ export function FeedStatsPage({ demo: _demo }: { demo: boolean }) {
   }, [jobId, refetch]);
 
   const rows = data?.rows ?? [];
+  const running = !!jobId || runMut.isPending;
+  const totals = rows.reduce(
+    (acc, r) => ({
+      queued: acc.queued + (r.queued ?? 0),
+      today: acc.today + (r.today_seen ?? 0),
+      seen: acc.seen + (r.total_seen ?? 0),
+    }),
+    { queued: 0, today: 0, seen: 0 },
+  );
 
   return (
-    <div className="scroll min-h-0 flex-1 overflow-y-auto">
-      <header className="flex items-start justify-between px-7 py-5" style={{ padding: "var(--head-pad)" }}>
-        <div>
-          <h2 className="font-bold text-[var(--ink-bright)]" style={{ fontSize: "var(--title-size)" }}>
-            Feed Stats
-          </h2>
-          <p className="mt-1 font-mono text-[10px] text-[var(--ink-faint)]">all feeds · keep-rate tracked going forward</p>
-        </div>
-        <div className="text-right">
-          <button
-            type="button"
-            disabled={!!jobId || runMut.isPending}
-            onClick={() => runMut.mutate()}
-            className="btn-press rounded-lg border border-[var(--rail-neutral)] px-3 py-1.5 font-mono text-[11px] font-semibold text-[var(--ink-muted)] hover:border-[var(--ac)] hover:text-[var(--ac)] disabled:opacity-55"
-          >
-            Run feeder now
-          </button>
-          <p className={cn("mt-1 font-mono text-[9px]", jobErr ? "text-[var(--drop-ink)]" : "text-[var(--ink-faint)]")}>
-            {jobMsg || "pulls every feed once — same as the 01:30 agent"}
-          </p>
-        </div>
-      </header>
+    <AppShell
+      title="Feed Stats"
+      subtitle="feeds.toml · keep-rate tracked going forward"
+      actions={
+        <button type="button" disabled={running} onClick={() => runMut.mutate()} className="btn btn-accent">
+          <Play className="h-3.5 w-3.5" aria-hidden="true" />
+          <span className="hidden sm:inline">{running ? "Running…" : "Run feeder"}</span>
+          <span className="sm:hidden">{running ? "…" : "Run"}</span>
+        </button>
+      }
+    >
+      <div className="mx-auto w-full max-w-[1000px]" style={{ padding: "var(--card-pad)" }}>
+        <p
+          className={cn(
+            "meta mb-5",
+            jobErr && "text-[var(--drop-ink)]",
+            running && "text-[var(--ac)]",
+          )}
+          role="status"
+        >
+          {jobMsg || "pulls every feed once — same as the 01:30 agent"}
+        </p>
 
-      <div style={{ padding: "0 var(--card-pad) var(--card-pad)" }}>
-        <div className="mb-2 font-mono text-[10px] font-bold text-[var(--ink-faint)]">PER-FEED</div>
-        <div className="overflow-x-auto rounded-lg border border-[var(--border)] bg-[var(--raise)]">
-          <table className="w-full min-w-[640px] border-collapse font-mono text-[11px]">
+        <div className="mb-6 grid grid-cols-3 gap-2 sm:gap-3">
+          <StatTile label="feeds" value={rows.length} />
+          <StatTile label="queued" value={totals.queued} accent />
+          <StatTile label="seen today" value={totals.today} />
+        </div>
+
+        <div className="label mb-2">Per feed</div>
+
+        {/* cards below md, table from md up */}
+        <div className="flex flex-col gap-2 md:hidden">
+          {isLoading ? (
+            <p className="text-[13px] text-[var(--ink-dim)]">Loading…</p>
+          ) : rows.length ? (
+            rows.map((row) => <FeedCard key={row.id} row={row} />)
+          ) : (
+            <EmptyFeeds />
+          )}
+        </div>
+
+        <div className="hidden overflow-x-auto rounded-xl border border-[var(--border)] bg-[var(--raise)] md:block">
+          <table className="w-full min-w-[680px] border-collapse font-mono text-[11.5px]">
+            <caption className="sr-only">Per-feed ingestion statistics</caption>
             <thead>
-              <tr className="text-left text-[var(--ink-faint)]">
-                {["FEED", "ADAPTER", "TRUST", "CAP", "SEEN", "TODAY", "QUEUED", "KEEP-RATE"].map((h) => (
-                  <th key={h} className="px-2 py-2 font-bold">
+              <tr className="border-b border-[var(--border)] text-left">
+                {COLUMNS.map((h, i) => (
+                  <th
+                    key={h}
+                    scope="col"
+                    className={cn(
+                      "px-3 py-2.5 text-[10px] font-bold tracking-[0.12em] text-[var(--ink-faint)] uppercase",
+                      i > 0 && "text-center",
+                    )}
+                  >
                     {h}
                   </th>
                 ))}
@@ -108,33 +146,40 @@ export function FeedStatsPage({ demo: _demo }: { demo: boolean }) {
             <tbody>
               {isLoading ? (
                 <tr>
-                  <td colSpan={8} className="px-2 py-6 text-[var(--ink-dim)]">
+                  <td colSpan={8} className="px-3 py-6 text-[var(--ink-dim)]">
                     Loading…
                   </td>
                 </tr>
               ) : rows.length ? (
                 rows.map((row) => (
-                  <tr key={row.id} className="border-t border-[var(--border-soft)]">
-                    <td className="px-2 py-1.5 text-[var(--ink)]">{row.id}</td>
-                    <td className="px-2 py-1.5 text-center text-[var(--ink-muted)]">{row.adapter}</td>
-                    <td className="px-2 py-1.5 text-center text-[var(--ink-muted)]">{row.trust}</td>
-                    <td className="px-2 py-1.5 text-center text-[var(--ink-muted)]">{row.cap}</td>
-                    <td className="px-2 py-1.5 text-center text-[var(--ink-muted)]">{row.total_seen}</td>
-                    <td className="px-2 py-1.5 text-center text-[var(--ink-muted)]">{row.today_seen}</td>
-                    <td className="px-2 py-1.5 text-center text-[var(--ink-muted)]">{row.queued}</td>
-                    <td className="px-2 py-1.5 text-center">
+                  <tr
+                    key={row.id}
+                    className="border-t border-[var(--border-soft)] transition-colors hover:bg-white/[0.02]"
+                  >
+                    <th scope="row" className="px-3 py-2 text-left font-medium text-[var(--ink)]">
+                      {row.id}
+                    </th>
+                    <Cell>{row.adapter}</Cell>
+                    <Cell>{row.trust}</Cell>
+                    <Cell>{row.cap}</Cell>
+                    <Cell>{row.total_seen}</Cell>
+                    <Cell>{row.today_seen}</Cell>
+                    <Cell>{row.queued}</Cell>
+                    <td className="tnum px-3 py-2 text-center">
                       {row.keep_rate == null ? (
                         <span className="text-[var(--ink-dim2)]">N/A</span>
                       ) : (
-                        <span className="text-[var(--ac)]">{Math.round(row.keep_rate * 100)}%</span>
+                        <span className="font-semibold text-[var(--ac)]">
+                          {Math.round(row.keep_rate * 100)}%
+                        </span>
                       )}
                     </td>
                   </tr>
                 ))
               ) : (
                 <tr>
-                  <td colSpan={8} className="px-2 py-6 text-[var(--ink-dim)]">
-                    No feeds configured (feeds.toml).
+                  <td colSpan={8}>
+                    <EmptyFeeds bare />
                   </td>
                 </tr>
               )}
@@ -142,25 +187,86 @@ export function FeedStatsPage({ demo: _demo }: { demo: boolean }) {
           </table>
         </div>
 
-        <div className="mt-4 text-[12px] leading-relaxed text-[var(--ink-dim2)]">
-          <div className="mb-1.5 font-mono text-[10px] font-bold text-[var(--ink-faint)]">WHY SOME SHOW N/A</div>
-          Keep-rate is tracked going forward: a feed needs at least 10 keep/drop decisions before a number is shown.
-        </div>
+        <p className="measure mt-4 text-[12.5px] leading-relaxed text-[var(--ink-dim2)]">
+          <span className="label mr-2">Why N/A</span>
+          Keep-rate is tracked going forward: a feed needs at least 10 keep/drop decisions before a
+          number is shown.
+        </p>
 
-        <div className="mt-5">
+        <div className="mt-7">
           {!showForm ? (
-            <button
-              type="button"
-              onClick={() => setShowForm(true)}
-              className="btn-press font-mono text-[11px] font-semibold text-[var(--ac)] hover:underline"
-            >
-              + Add source
+            <button type="button" onClick={() => setShowForm(true)} className="btn">
+              <Plus className="h-4 w-4" aria-hidden="true" />
+              Add source
             </button>
           ) : (
             <NewSourceForm onClose={() => setShowForm(false)} />
           )}
         </div>
       </div>
+    </AppShell>
+  );
+}
+
+function Cell({ children }: { children: React.ReactNode }) {
+  return <td className="tnum px-3 py-2 text-center text-[var(--ink-muted)]">{children}</td>;
+}
+
+function StatTile({ label, value, accent }: { label: string; value: number; accent?: boolean }) {
+  return (
+    <div className="surface px-3 py-2.5">
+      <div
+        className={cn(
+          "tnum font-mono text-[20px] leading-none font-bold",
+          accent ? "text-[var(--ac)]" : "text-[var(--ink-bright)]",
+        )}
+      >
+        {value}
+      </div>
+      <div className="meta mt-1.5">{label}</div>
+    </div>
+  );
+}
+
+function FeedCard({ row }: { row: FeedStatsRow }) {
+  return (
+    <div className="surface p-3">
+      <div className="flex items-baseline justify-between gap-2">
+        <span className="truncate font-mono text-[12px] font-semibold text-[var(--ink)]">{row.id}</span>
+        <span className="tnum font-mono text-[11px] font-semibold text-[var(--ac)]">
+          {row.keep_rate == null ? (
+            <span className="text-[var(--ink-dim2)]">N/A</span>
+          ) : (
+            `${Math.round(row.keep_rate * 100)}%`
+          )}
+        </span>
+      </div>
+      <dl className="mt-2 grid grid-cols-3 gap-y-2">
+        {(
+          [
+            ["adapter", row.adapter],
+            ["trust", row.trust],
+            ["cap", row.cap],
+            ["seen", row.total_seen],
+            ["today", row.today_seen],
+            ["queued", row.queued],
+          ] as const
+        ).map(([k, v]) => (
+          <div key={k}>
+            <dt className="meta">{k}</dt>
+            <dd className="tnum font-mono text-[12px] text-[var(--ink-muted)]">{v}</dd>
+          </div>
+        ))}
+      </dl>
+    </div>
+  );
+}
+
+function EmptyFeeds({ bare }: { bare?: boolean }) {
+  return (
+    <div className={cn("px-3 py-8 text-center", !bare && "surface")}>
+      <p className="text-[13px] text-[var(--ink-dim)]">No feeds configured.</p>
+      <p className="meta mt-1">add one to feeds.toml, or use “Add source” below</p>
     </div>
   );
 }
@@ -183,7 +289,12 @@ function NewSourceForm({ onClose }: { onClose: () => void }) {
     try {
       const tagList = tags.split(/[\s,]+/).filter(Boolean);
       if (kind === "webpage") {
-        await createWebpage({ title: title || undefined, url: url || undefined, body: body || undefined, tags: tagList });
+        await createWebpage({
+          title: title || undefined,
+          url: url || undefined,
+          body: body || undefined,
+          tags: tagList,
+        });
         toast.success("Source deposited");
       } else {
         const req: NewFeedRequest = {
@@ -208,44 +319,62 @@ function NewSourceForm({ onClose }: { onClose: () => void }) {
   }
 
   return (
-    <form onSubmit={submit} className="rounded-lg border border-[var(--border)] bg-[var(--raise)] p-4">
-      <div className="mb-3 flex items-center justify-between">
-        <span className="font-mono text-[10px] font-bold text-[var(--ink-faint)]">NEW SOURCE</span>
-        <div className="flex gap-0.5 rounded-lg border border-[var(--border)] bg-[var(--bg)] p-0.5">
-          {(["webpage", "rss", "yt", "api"] as const).map((k) => (
-            <button
-              key={k}
-              type="button"
-              onClick={() => setKind(k)}
-              className={cn(
-                "btn-press rounded-md px-2.5 py-1 font-mono text-[10px] font-semibold capitalize",
-                kind === k ? "bg-[var(--ac)] text-[var(--ac-on)]" : "text-[var(--ink-dim)]",
-              )}
-            >
-              {k === "yt" ? "youtube" : k}
-            </button>
-          ))}
-        </div>
-        <button type="button" onClick={onClose} className="font-mono text-[9px] font-bold text-[var(--ink-faint)]">
-          hide ✕
+    <form onSubmit={submit} className="surface enter measure p-4">
+      <div className="mb-3 flex items-center justify-between gap-3">
+        <h2 className="label">New source</h2>
+        <button type="button" onClick={onClose} className="btn btn-icon" aria-label="Hide the new-source form">
+          <X className="h-4 w-4" aria-hidden="true" />
         </button>
       </div>
-      <p className="mb-3 text-[12px] text-[var(--ink-dim2)]">{BLURBS[kind]}</p>
-      <div className="grid gap-2">
+
+      <div
+        className="mb-3 flex flex-wrap gap-0.5 rounded-lg border border-[var(--border)] bg-[var(--bg)] p-0.5"
+        role="tablist"
+        aria-label="Source kind"
+      >
+        {(["webpage", "rss", "yt", "api"] as const).map((k) => (
+          <button
+            key={k}
+            type="button"
+            role="tab"
+            aria-selected={kind === k}
+            onClick={() => setKind(k)}
+            className={cn(
+              "btn-press flex-1 rounded-md px-2.5 py-1.5 font-mono text-[10.5px] font-semibold capitalize transition-colors",
+              kind === k
+                ? "bg-[var(--ac)] text-[var(--ac-on)]"
+                : "text-[var(--ink-dim)] hover:text-[var(--ink)]",
+            )}
+          >
+            {k === "yt" ? "youtube" : k}
+          </button>
+        ))}
+      </div>
+
+      <p className="mb-4 text-[12.5px] leading-relaxed text-[var(--ink-dim2)]">{BLURBS[kind]}</p>
+
+      <div className="grid gap-3">
         <Field label="Title" value={title} onChange={setTitle} />
-        <Field label="URL" value={url} onChange={setUrl} />
+        <Field
+          label="URL"
+          value={url}
+          onChange={setUrl}
+          type="url"
+          required={kind !== "webpage"}
+          placeholder="https://…"
+        />
         {kind === "webpage" ? <Field label="Body (note)" value={body} onChange={setBody} multiline /> : null}
         <Field label="Tags" value={tags} onChange={setTags} hint="space-separated" />
         {kind !== "webpage" ? (
           <>
             <Field label="Feed id" value={feedId} onChange={setFeedId} hint="optional" />
-            <Field label="Daily cap" value={cap} onChange={setCap} hint="optional override" />
-            <label className="flex items-center gap-2 text-[12px] text-[var(--ink-dim)]">
-              Trust
+            <Field label="Daily cap" value={cap} onChange={setCap} hint="optional override" inputMode="numeric" />
+            <label className="block">
+              <span className="label mb-1 block">Trust</span>
               <select
                 value={trust}
                 onChange={(e) => setTrust(e.target.value as "auto" | "queue")}
-                className="rounded border border-[var(--border)] bg-[var(--bg)] px-2 py-1 font-mono text-[11px]"
+                className="field max-w-[180px]"
               >
                 <option value="queue">queue</option>
                 <option value="auto">auto</option>
@@ -254,12 +383,9 @@ function NewSourceForm({ onClose }: { onClose: () => void }) {
           </>
         ) : null}
       </div>
-      <button
-        type="submit"
-        disabled={busy}
-        className="btn-press mt-4 rounded-lg bg-[var(--ac)] px-4 py-2 font-mono text-[11px] font-semibold text-[var(--ac-on)] disabled:opacity-55"
-      >
-        {kind === "webpage" ? "Deposit source" : "Subscribe feed"}
+
+      <button type="submit" disabled={busy} className="btn btn-accent mt-4">
+        {busy ? "Working…" : kind === "webpage" ? "Deposit source" : "Subscribe feed"}
       </button>
     </form>
   );
@@ -271,24 +397,47 @@ function Field({
   onChange,
   hint,
   multiline,
+  type = "text",
+  required,
+  placeholder,
+  inputMode,
 }: {
   label: string;
   value: string;
   onChange: (v: string) => void;
   hint?: string;
   multiline?: boolean;
+  type?: string;
+  required?: boolean;
+  placeholder?: string;
+  inputMode?: "numeric";
 }) {
-  const cls =
-    "w-full rounded border border-[var(--border)] bg-[var(--bg)] px-2.5 py-1.5 font-mono text-[11px] text-[var(--ink)] outline-none focus:border-[var(--ac)]";
   return (
-    <label className="block text-[11px] text-[var(--ink-dim)]">
-      <span className="mb-0.5 block font-mono text-[9px] font-bold uppercase text-[var(--ink-faint)]">{label}</span>
+    <label className="block">
+      <span className="label mb-1 block">
+        {label}
+        {required ? <span className="ml-1 text-[var(--drop-ink)]">*</span> : null}
+      </span>
       {multiline ? (
-        <textarea value={value} onChange={(e) => onChange(e.target.value)} rows={4} className={cls} />
+        <textarea
+          value={value}
+          onChange={(e) => onChange(e.target.value)}
+          rows={4}
+          className="field resize-y"
+          placeholder={placeholder}
+        />
       ) : (
-        <input value={value} onChange={(e) => onChange(e.target.value)} className={cls} />
+        <input
+          value={value}
+          type={type}
+          required={required}
+          inputMode={inputMode}
+          placeholder={placeholder}
+          onChange={(e) => onChange(e.target.value)}
+          className="field"
+        />
       )}
-      {hint ? <span className="mt-0.5 block font-mono text-[9px] text-[var(--ink-fainter)]">{hint}</span> : null}
+      {hint ? <span className="meta mt-1 block">{hint}</span> : null}
     </label>
   );
 }
