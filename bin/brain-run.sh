@@ -38,7 +38,7 @@ if [[ -n "$MODEL" ]]; then
 fi
 
 "${cmd[@]}" >>"$LOG" 2>&1
-status=$?
+exit_code=$?
 
-echo "[$(date "+%Y-%m-%d %H:%M:%S")] EXIT $status" >>"$LOG"
-exit $status
+echo "[$(date "+%Y-%m-%d %H:%M:%S")] EXIT $exit_code" >>"$LOG"
+exit $exit_code
