@@ -38,6 +38,40 @@ second-brain/
 | `/lint` | Find contradictions, orphans, dangling links, missing citations, stale pages. Run weekly. |
 | `/digest` | Synthesize recent activity into a dated digest: themes, patterns, open questions. |
 
+## The web app
+
+`bin/brain-web.sh` opens the brain in a browser — FastAPI on `:8787`, Vite on `:5173`,
+both over this same vault on disk (needs `pnpm install` and a `.venv`; see *Getting
+started*). Four sections live on a persistent left rail, every screen is keyboard-driven
+(`r` queue · `f` feeds · `w` wiki · `s` settings), and the layout is responsive down to a
+phone: the rail collapses to a drawer and the contextual lists become slide-overs.
+
+It reads and triages; it never synthesizes. Nothing here writes a wiki page — that stays
+the agent's job, so anything you keep waits for the next `/sync`.
+
+**Review Queue** — the `brain-feed review` triage as a screen. Queue on the left, the
+selected item's recap on the right (`g` swaps to its outline), and Keep (`k` → `sources/`)
+/ Drop (`d`) / Skip (`→`) / Open (`o`) / Undo (`u`) as an action bar.
+
+![Review Queue at 1920×1080: queue list on the left, article recap on the right, action bar along the bottom](docs/screenshots/review-queue.png)
+
+**Wiki** — the synthesized layer, read-only. The page tree is filterable; `[[wikilinks]]`
+resolve to page titles, `[source-id]` citations render as numbered superscripts that link
+through to the raw source.
+
+![A wiki concept page at 1920×1080: page tree on the left, rendered concept page with tags, wikilinks and numbered citations](docs/screenshots/wiki-page.png)
+
+**Feeds** — per-feed state from `feeds.toml` (adapter, trust, cap, seen, queued,
+keep-rate), a **Run feeder** button that fires the same pull as the 01:30 agent, and an
+**Add source** form. Keep-rate stays `N/A` until a feed has 10 keep/drop decisions.
+
+![Feed Stats at 1920×1080: three summary tiles above a per-feed table](docs/screenshots/feed-stats.png)
+
+**Settings** — the feeder's global daily cap (written back to `feeds.toml`), the model the
+unattended agents run on (`.brain/config.json`), appearance prefs, and a shortcuts card.
+
+![Settings at 1920×1080: feeder cap, Claude model, appearance and shortcuts cards](docs/screenshots/settings.png)
+
 ## Running on a schedule (macOS)
 
 The brain maintains itself unattended via launchd — drop sources in, read the wiki
@@ -112,16 +146,26 @@ Deterministic helpers — no LLM, no tokens — that surround the agent:
   reuse the CLI's logic verbatim, so behaviour stays single-source, and like the CLI it
   does no synthesis: kept items wait for the nightly `/sync`. `--demo` seeds three
   showcase items with no filesystem writes. Needs Tk (`brew install python-tk@3.14`).
+  [The web app](#the-web-app) covers the same three screens in a browser, plus the wiki;
+  both remain functional and share the same feeder and files.
 - **Read the wiki in a browser** — `bin/brain-serve.sh [port]` renders `wiki/` and
   `index.md` read-only, resolving wikilinks, citations, and backlinks, and surfacing
-  stubs and dangling links.
+  stubs and dangling links. Zero install: stdlib Python, no build step. For the fuller
+  surface — triage, feeds and settings alongside the wiki — see [the web
+  app](#the-web-app).
 
 ## Getting started
 
 1. Open this folder in Claude Code.
 2. Run `/capture <a url or file>` to add your first source. Watch the wiki populate.
 3. Run `/lint` to see structural health, `/digest` for a synthesis.
-4. Read the wiki via `index.md`.
+4. Read the wiki via `index.md`, or in the browser:
+
+   ```sh
+   pnpm install
+   python3 -m venv .venv && .venv/bin/pip install fastapi 'uvicorn[standard]' httpx pytest
+   bin/brain-web.sh            # → http://localhost:5173
+   ```
 
 ## Use it well (gotchas from the article)
 

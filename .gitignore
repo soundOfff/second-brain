@@ -22,3 +22,6 @@ __pycache__/
 node_modules/
 .pnpm-store/
 apps/web/dist/
+
+# Playwright MCP scratch output (screenshots, snapshots, console logs)
+.playwright-mcp/

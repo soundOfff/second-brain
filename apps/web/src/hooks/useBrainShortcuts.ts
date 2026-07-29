@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 
 export type ShortcutAction =
   | "keep"
@@ -13,8 +13,8 @@ export type ShortcutAction =
   | "review"
   | "stats"
   | "settings"
-  | "toggleScreen"
-  | "quit";
+  | "wiki"
+  | "toggleScreen";
 
 const SHORTCUTS: Array<{ key: string; action: ShortcutAction; when?: "shift" }> = [
   { key: "k", action: "keep" },
@@ -30,8 +30,8 @@ const SHORTCUTS: Array<{ key: string; action: ShortcutAction; when?: "shift" }> 
   { key: "r", action: "review" },
   { key: "f", action: "stats" },
   { key: "s", action: "settings" },
+  { key: "w", action: "wiki" },
   { key: "t", action: "toggleScreen" },
-  { key: "q", action: "quit" },
 ];
 
 function isTypingTarget(el: EventTarget | null) {
@@ -40,22 +40,34 @@ function isTypingTarget(el: EventTarget | null) {
   return tag === "INPUT" || tag === "TEXTAREA" || tag === "SELECT" || el.isContentEditable;
 }
 
+/**
+ * Binds the global key map. Several components may call this at once — each
+ * only claims the actions it actually handles, so the shell can own navigation
+ * while a page owns its item-level actions.
+ */
 export function useBrainShortcuts(
   handlers: Partial<Record<ShortcutAction, () => void>>,
   enabled = true,
 ) {
+  // latest-value ref keeps the listener stable across the page's re-renders
+  const ref = useRef(handlers);
+  useEffect(() => {
+    ref.current = handlers;
+  });
+
   useEffect(() => {
     if (!enabled) return;
 
     const onKey = (e: KeyboardEvent) => {
       if (isTypingTarget(e.target)) return;
+      if (e.metaKey || e.ctrlKey || e.altKey) return;
 
       for (const sc of SHORTCUTS) {
         const shift = sc.when === "shift";
         if (shift && !e.shiftKey) continue;
         if (!shift && e.shiftKey && sc.key === "r" && sc.action === "review") continue;
         if (e.key.toLowerCase() === sc.key.toLowerCase() || e.key === sc.key) {
-          const fn = handlers[sc.action];
+          const fn = ref.current[sc.action];
           if (fn) {
             e.preventDefault();
             fn();
@@ -67,7 +79,7 @@ export function useBrainShortcuts(
 
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [handlers, enabled]);
+  }, [enabled]);
 }
 
 export const SHORTCUT_REFERENCE: Array<{ cap: string; desc: string }> = [
@@ -82,7 +94,7 @@ export const SHORTCUT_REFERENCE: Array<{ cap: string; desc: string }> = [
   { cap: "↑", desc: "select the previous queued item" },
   { cap: "r", desc: "go to Review Queue" },
   { cap: "f", desc: "go to Feed Stats" },
+  { cap: "w", desc: "go to the Wiki" },
   { cap: "s", desc: "go to Settings" },
   { cap: "t", desc: "toggle review ↔ stats" },
-  { cap: "q", desc: "quit (no-op in browser)" },
 ];

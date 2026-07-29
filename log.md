@@ -836,3 +836,32 @@ Turns capture from push-only into pull: the brain now feeds itself unattended.
     (GPT-5.6 is corroborated elsewhere in the brain; "Soul" is not).
   - Video content claims (guardrail-forced pivot to Chinese models, 1,000+ actions, April
     Mythos timeline) are unsourced *within the video* and marked as such.
+
+## 2026-07-29 — docs: README covers the web app (+ two markdown-renderer fixes)
+
+- **Command:** interactive session · "commit all and update the readme showing this new
+  web with screenshots (1920x1080)".
+- **Closed the 2026-07-06 follow-up.** That entry shipped `apps/web` + `apps/api` and
+  noted "README / `docs/external-tools.md` not updated yet". The README described the Tk
+  GUI and `brain-serve.sh` but never mentioned the SPA at all. Added a **The web app**
+  section (rail, shortcuts, responsive behaviour, and the fact that it triages but never
+  synthesizes), four 1920×1080 screenshots in `docs/screenshots/`, launch steps under
+  *Getting started*, and cross-links from the two older browser/GUI bullets.
+- **Screenshots taken against live data**, not `?demo=1` — 23 real queued items, the five
+  configured feeds, 113 wiki pages.
+- **Two renderer bugs found while shooting `concepts/llm-wiki`, then fixed**
+  (`apps/web/src/components/Markdown.tsx`):
+  - **Hard-wrapped list items broke every list.** Wiki bodies wrap inside an item and
+    indent the remainder; the parser only accepted marker lines, so the wrapped tail
+    ended the list and the next item restarted the numbering at 1 (the three-layer list
+    rendered 1, 2, 1). New `collectItems` absorbs indented continuation lines.
+    Indentation is *required*: clipped article bodies have no blank lines at all, so lazy
+    unindented continuation would swallow an entire article into one bullet.
+  - **A wikilink inside bold stayed literal.** `**[[concepts/second-brain]]**` rendered as
+    raw text because the bold branch pushed its content as a string. Bold and italic now
+    recurse through `renderInline`, which needs a per-call regex instance — the shared
+    module-level one would have left the outer scan mid-string.
+- **notes:** `bin/brain-clip-gui.sh`'s Tk GUI and `brain-serve.py` still work and share
+  the same files; the README now says so rather than implying either was replaced.
+  `.playwright-mcp/` (MCP scratch output) is now gitignored, and the stale root-level
+  `web-3001.png` — a shot of the pre-redesign faux-macOS window — was deleted.

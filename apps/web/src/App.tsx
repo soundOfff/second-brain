@@ -1,5 +1,4 @@
 import { Navigate, Route, Routes, useSearchParams } from "react-router-dom";
-import { AppShell } from "./components/AppShell";
 import { ReviewQueuePage } from "./features/feed/ReviewQueuePage";
 import { FeedStatsPage } from "./features/feed/FeedStatsPage";
 import { SettingsPage } from "./features/feed/SettingsPage";
@@ -12,18 +11,9 @@ function DemoRedirect() {
   return <Navigate to="/feed/review?demo=1" replace />;
 }
 
-function FeedRoutes() {
+function ReviewRoute() {
   const [params] = useSearchParams();
-  const demo = params.get("demo") === "1";
-
-  return (
-    <Routes>
-      <Route path="review" element={<ReviewQueuePage demo={demo} />} />
-      <Route path="stats" element={<FeedStatsPage demo={demo} />} />
-      <Route path="settings" element={<SettingsPage />} />
-      <Route path="*" element={<Navigate to="review" replace />} />
-    </Routes>
-  );
+  return <ReviewQueuePage demo={params.get("demo") === "1"} />;
 }
 
 export default function App() {
@@ -31,14 +21,10 @@ export default function App() {
     <Routes>
       <Route path="/" element={<Navigate to="/feed/review" replace />} />
       <Route path="/demo" element={<DemoRedirect />} />
-      <Route
-        path="/feed/*"
-        element={
-          <AppShell mode="feed">
-            <FeedRoutes />
-          </AppShell>
-        }
-      />
+      <Route path="/feed" element={<Navigate to="/feed/review" replace />} />
+      <Route path="/feed/review" element={<ReviewRoute />} />
+      <Route path="/feed/stats" element={<FeedStatsPage />} />
+      <Route path="/feed/settings" element={<SettingsPage />} />
       <Route path="/wiki" element={<WikiLayout />}>
         <Route index element={<WikiIndexPage />} />
         <Route path="source/:id" element={<SourceViewerPage />} />
