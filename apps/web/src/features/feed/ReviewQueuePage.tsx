@@ -1,13 +1,17 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useNavigate } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 import {
   ArrowRight,
+  ArrowUpRight,
   Check,
+  ChevronDown,
+  ChevronUp,
   ExternalLink,
   RefreshCw,
   Undo2,
+  Waypoints,
   X,
 } from "lucide-react";
 import type { ReviewItem } from "@second-brain/types";
@@ -16,6 +20,7 @@ import { useBrainShortcuts } from "../../hooks/useBrainShortcuts";
 import { AppShell } from "../../components/AppShell";
 import { SidePanel, SidePanelToggle } from "../../components/SidePanel";
 import { Kbd } from "../../components/Kbd";
+import { Markdown } from "../../components/Markdown";
 import { cn } from "../../lib/utils";
 
 type View = "recap" | "graph";
@@ -428,7 +433,7 @@ export function ReviewQueuePage({ demo }: { demo: boolean }) {
                     </div>
 
                     {view === "recap" ? (
-                      <RecapView item={current} />
+                      <RecapView key={current.id} item={current} />
                     ) : (
                       <GraphView item={current} />
                     )}
@@ -478,16 +483,54 @@ function Tally({
   );
 }
 
+/** Recaps run from a two-line clip note to a 15k-character article dump. */
+const LONG_RECAP = 2600;
+
 function RecapView({ item }: { item: ReviewItem }) {
+  const [expanded, setExpanded] = useState(false);
+  const long = item.summary.length > LONG_RECAP;
+  const clipped = long && !expanded;
+
   return (
     <>
-      <div className="recap-slab">
-        {item.summary.split("\n\n").map((p, i) => (
-          <p key={i} className={i ? "mt-3" : ""}>
-            {p}
-          </p>
-        ))}
+      <div
+        className={cn(
+          "recap-slab relative",
+          clipped && "max-h-[540px] overflow-hidden",
+        )}
+      >
+        <Markdown body={item.summary} title={item.title} linkPages={false} />
+        {clipped ? (
+          <div
+            aria-hidden="true"
+            className="pointer-events-none absolute inset-x-0 bottom-0 h-28 bg-gradient-to-t from-[var(--raise)] via-[var(--raise)]/85 to-transparent"
+          />
+        ) : null}
       </div>
+
+      {long ? (
+        <button
+          type="button"
+          onClick={() => setExpanded((v) => !v)}
+          className="btn mt-3"
+        >
+          {expanded ? (
+            <>
+              <ChevronUp className="h-4 w-4" aria-hidden="true" /> Collapse
+            </>
+          ) : (
+            <>
+              <ChevronDown className="h-4 w-4" aria-hidden="true" /> Show full
+              text
+              <span className="meta">
+                {item.length ||
+                  `${Math.round(item.summary.length / 1000)}k chars`}
+              </span>
+            </>
+          )}
+        </button>
+      ) : null}
+
       {item.tags.length ? (
         <div className="mt-4 flex flex-wrap gap-2">
           {item.tags.map((tag) => (
@@ -497,30 +540,7 @@ function RecapView({ item }: { item: ReviewItem }) {
           ))}
         </div>
       ) : null}
-      {item.overlaps.length ? (
-        <div className="mt-6">
-          <div className="label mb-2.5">Overlaps</div>
-          <div className="flex flex-col gap-2">
-            {item.overlaps.map((o) => (
-              <div
-                key={o.page}
-                className="flex flex-wrap items-center gap-x-3 gap-y-1 rounded-lg border border-[var(--border-soft)] bg-[var(--sunk)] px-3.5 py-2.5"
-              >
-                <span className="font-mono text-xs font-medium text-[var(--ac)]">
-                  {o.page}
-                </span>
-                <span
-                  className="hidden h-3.5 w-px bg-[var(--rail-neutral)] sm:block"
-                  aria-hidden="true"
-                />
-                <span className="flex-1 text-[12.5px] text-[var(--ink-dim)]">
-                  {o.note}
-                </span>
-              </div>
-            ))}
-          </div>
-        </div>
-      ) : null}
+
       <div className="mt-6 flex flex-wrap gap-x-6 gap-y-1">
         {item.queued ? (
           <span className="meta">queued {item.queued}</span>
@@ -532,53 +552,127 @@ function RecapView({ item }: { item: ReviewItem }) {
   );
 }
 
+/**
+ * The structural view: the clipped article's own section headings plus the
+ * pages it already touches in the wiki. The feeder leaves `at`/`target` empty
+ * for articles and fills them only for timestamped video breakdowns, so both
+ * columns are rendered conditionally rather than as empty gutters.
+ */
+/**
+ * Headings arrive from the clipper with half-stripped emphasis ("Summary**"),
+ * so trim stray markers rather than rendering them.
+ */
+const cleanLabel = (s: string) =>
+  (s ?? "")
+    .replace(/^[\s*_#`>]+/, "")
+    .replace(/[\s*_`]+$/, "")
+    .trim();
+
 function GraphView({ item }: { item: ReviewItem }) {
-  return (
-    <div>
-      <div className="flex items-center gap-2.5 pb-0.5">
-        <span
+  const sections = item.breakdown
+    .map((b) => ({ ...b, label: cleanLabel(b.label) }))
+    .filter((b) => b.label || b.at?.trim());
+  const timed = sections.some((b) => b.at?.trim());
+
+  if (!sections.length && !item.overlaps.length) {
+    return (
+      <div className="surface flex flex-col items-center gap-2 px-6 py-10 text-center">
+        <Waypoints
+          className="h-6 w-6 text-[var(--ink-fainter)]"
           aria-hidden="true"
-          className="h-[11px] w-[11px] shrink-0 rounded-full bg-[var(--ac)] shadow-[0_0_0_4px_rgba(var(--ac-rgb),0.16),0_0_10px_rgba(var(--ac-rgb),0.3)]"
         />
-        <span className="min-w-0 flex-1 truncate text-sm font-semibold text-[var(--ink-bright)]">
-          {item.title}
-        </span>
-        <span className="pill shrink-0 uppercase">{item.type}</span>
+        <p className="text-[13.5px] text-[var(--ink-dim)]">
+          No structure extracted for this item.
+        </p>
+        <p className="meta max-w-[320px]">
+          Outlines come from the clipped headings; overlaps appear once the item
+          touches an existing wiki page.
+        </p>
       </div>
-      {item.breakdown.length ? (
-        <div className="mt-4">
-          <div className="label mb-0.5 pl-9">Breakdown</div>
-          <ol className="relative">
+    );
+  }
+
+  return (
+    <div className="flex flex-col gap-7">
+      {sections.length ? (
+        <section>
+          <div className="label mb-2.5">
+            {timed ? "Timeline" : "Sections"}
+            <span className="ml-2 font-normal opacity-70">
+              {sections.length}
+            </span>
+          </div>
+          <ol className="relative flex flex-col">
             <span
               aria-hidden="true"
-              className="absolute top-2 bottom-2 left-[5px] w-px bg-[var(--border)]"
+              className="absolute top-3 bottom-3 left-[3.5px] w-px bg-[var(--border)]"
             />
-            {item.breakdown.map((b, i) => (
-              <li key={i} className="relative py-2 pl-9">
+            {sections.map((b, i) => (
+              <li key={i} className="relative py-1.5 pl-7">
                 <span
                   aria-hidden="true"
-                  className="absolute top-[15px] left-[2px] h-[7px] w-[7px] rounded-full bg-[var(--rail-neutral)]"
+                  className="absolute top-[11px] left-0 h-2 w-2 rounded-full border border-[var(--rail-neutral)] bg-[var(--node)]"
                 />
-                <div className="flex flex-wrap items-baseline gap-2.5">
-                  <span className="min-w-12 font-mono text-xs font-semibold text-[var(--ac)]">
-                    {b.at}
-                  </span>
-                  <span className="text-[13.5px] font-medium text-[var(--ink)]">
+                <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
+                  {b.at?.trim() ? (
+                    <span className="tnum shrink-0 font-mono text-[11.5px] font-semibold text-[var(--ac)]">
+                      {b.at}
+                    </span>
+                  ) : null}
+                  <span className="min-w-0 flex-1 text-[13.5px] leading-snug text-[var(--ink)]">
                     {b.label}
                   </span>
                 </div>
-                <div className="mt-1 font-mono text-xs break-all text-[var(--ink-faint)]">
-                  {b.target}
-                </div>
+                {b.target?.trim() ? (
+                  <a
+                    href={b.target}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="meta mt-0.5 block break-all hover:text-[var(--ac)]"
+                  >
+                    {b.target}
+                  </a>
+                ) : null}
               </li>
             ))}
           </ol>
-        </div>
-      ) : (
-        <p className="mt-4 text-sm text-[var(--ink-dim)]">
-          No outline breakdown for this item.
-        </p>
-      )}
+        </section>
+      ) : null}
+
+      {item.overlaps.length ? (
+        <section>
+          <div className="label mb-2.5">
+            Overlaps
+            <span className="ml-2 font-normal opacity-70">
+              {item.overlaps.length}
+            </span>
+          </div>
+          <div className="flex flex-col gap-2">
+            {item.overlaps.map((o) => (
+              <Link
+                key={o.page}
+                to={`/wiki/${o.page.replace(/^\//, "")}`}
+                className="group flex flex-wrap items-center gap-x-3 gap-y-1 rounded-lg border border-[var(--border-soft)] bg-[var(--sunk)] px-3.5 py-2.5 transition-colors hover:border-[rgba(var(--ac-rgb),0.45)]"
+              >
+                <span className="font-mono text-xs font-medium text-[var(--ac)]">
+                  {o.page}
+                </span>
+                <span
+                  className="hidden h-3.5 w-px bg-[var(--rail-neutral)] sm:block"
+                  aria-hidden="true"
+                />
+                <span className="min-w-0 flex-1 text-[12.5px] text-[var(--ink-dim)]">
+                  {o.note}
+                </span>
+                <ArrowUpRight
+                  className="h-3.5 w-3.5 shrink-0 text-[var(--ink-fainter)] transition-colors group-hover:text-[var(--ac)]"
+                  aria-hidden="true"
+                />
+              </Link>
+            ))}
+          </div>
+        </section>
+      ) : null}
     </div>
   );
 }

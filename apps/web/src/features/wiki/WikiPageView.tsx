@@ -2,7 +2,7 @@ import { Link, useParams } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { FileText, Link2 } from "lucide-react";
 import { fetchWikiPage } from "../../lib/api";
-import { WikiMarkdown, citationOrder } from "./WikiMarkdown";
+import { Markdown, citationOrder } from "../../components/Markdown";
 import { cn } from "../../lib/utils";
 
 export function WikiPageView() {
@@ -58,7 +58,7 @@ export function WikiPageView() {
         ) : null}
       </header>
 
-      <WikiMarkdown body={data.body} title={meta.title ?? slug} />
+      <Markdown body={data.body} title={meta.title ?? slug} />
 
       {data.sources.length || data.backlinks.length ? (
         <div className="mt-10 grid gap-5 border-t border-[var(--border-soft)] pt-6 sm:grid-cols-2">
