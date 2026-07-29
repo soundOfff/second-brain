@@ -8,7 +8,7 @@
 
 set -u
 VAULT="/Users/User/Tomi/second-brain"
-export PATH="/Users/User/.local/bin:/usr/local/bin:/usr/bin:/bin:$PATH"
+export PATH="/opt/homebrew/bin:/Users/User/.local/bin:/usr/local/bin:/usr/bin:/bin:$PATH"
 
 PROMPT="${1:?usage: brain-run.sh \"<prompt>\"}"
 LOG="$VAULT/.brain/cron.log"
