@@ -1,0 +1,96 @@
+- generic [ref=f4e2]:
+  - generic [ref=f4e3]:
+    - link "Skip to content" [ref=f4e4] [cursor=pointer]:
+      - /url: "#main"
+    - navigation "Sections" [ref=f4e5]:
+      - link "Second Brain — home" [ref=f4e6] [cursor=pointer]:
+        - /url: /feed/review
+      - link "Queue" [ref=f4e12] [cursor=pointer]:
+        - /url: /feed/review
+      - link "Feeds" [ref=f4e18] [cursor=pointer]:
+        - /url: /feed/stats
+      - link "Wiki" [ref=f4e25] [cursor=pointer]:
+        - /url: /wiki
+      - link "Settings" [ref=f4e30] [cursor=pointer]:
+        - /url: /feed/settings
+    - generic [ref=f4e34]:
+      - banner [ref=f4e35]:
+        - generic [ref=f4e36]:
+          - heading "Feed Stats" [level=1] [ref=f4e37]
+          - generic [ref=f4e38]: feeds.toml · keep-rate tracked going forward
+        - button "Run feeder" [ref=f4e40] [cursor=pointer]
+      - main [ref=f4e44]:
+        - generic [ref=f4e45]:
+          - status [ref=f4e46]: pulls every feed once — same as the 01:30 agent
+          - generic [ref=f4e47]:
+            - generic [ref=f4e48]:
+              - generic [ref=f4e49]: "5"
+              - generic [ref=f4e50]: feeds
+            - generic [ref=f4e51]:
+              - generic [ref=f4e52]: "32"
+              - generic [ref=f4e53]: queued
+            - generic [ref=f4e54]:
+              - generic [ref=f4e55]: "0"
+              - generic [ref=f4e56]: seen today
+          - generic [ref=f4e57]: Per feed
+          - table [ref=f4e59]:
+            - caption [ref=f4e60]: Per-feed ingestion statistics
+            - rowgroup [ref=f4e61]:
+              - row [ref=f4e62]:
+                - columnheader "Feed" [ref=f4e63]
+                - columnheader "Adapter" [ref=f4e64]
+                - columnheader "Trust" [ref=f4e65]
+                - columnheader "Cap" [ref=f4e66]
+                - columnheader "Seen" [ref=f4e67]
+                - columnheader "Today" [ref=f4e68]
+                - columnheader "Queued" [ref=f4e69]
+                - columnheader "Keep-rate" [ref=f4e70]
+            - rowgroup [ref=f4e71]:
+              - row [ref=f4e72]:
+                - rowheader "lobsters-ai" [ref=f4e73]
+                - cell "rss" [ref=f4e74]
+                - cell "queue" [ref=f4e75]
+                - cell "8" [ref=f4e76]
+                - cell "37" [ref=f4e77]
+                - cell "0" [ref=f4e78]
+                - cell "13" [ref=f4e79]
+                - cell "100%" [ref=f4e80]
+              - row [ref=f4e82]:
+                - rowheader "hn-ai" [ref=f4e83]
+                - cell "rss" [ref=f4e84]
+                - cell "queue" [ref=f4e85]
+                - cell "10" [ref=f4e86]
+                - cell "47" [ref=f4e87]
+                - cell "0" [ref=f4e88]
+                - cell "19" [ref=f4e89]
+                - cell "78%" [ref=f4e90]
+              - row [ref=f4e92]:
+                - rowheader "arxiv-cs-cl" [ref=f4e93]
+                - cell "rss" [ref=f4e94]
+                - cell "queue" [ref=f4e95]
+                - cell "5" [ref=f4e96]
+                - cell "11" [ref=f4e97]
+                - cell "0" [ref=f4e98]
+                - cell "0" [ref=f4e99]
+                - cell "69%" [ref=f4e100]
+              - row [ref=f4e102]:
+                - rowheader "andrej-karpathy" [ref=f4e103]
+                - cell "rss" [ref=f4e104]
+                - cell "auto" [ref=f4e105]
+                - cell "2" [ref=f4e106]
+                - cell "10" [ref=f4e107]
+                - cell "0" [ref=f4e108]
+                - cell "0" [ref=f4e109]
+                - cell "N/A" [ref=f4e110]
+              - row [ref=f4e111]:
+                - rowheader "simon-willison" [ref=f4e112]
+                - cell "rss" [ref=f4e113]
+                - cell "auto" [ref=f4e114]
+                - cell "3" [ref=f4e115]
+                - cell "15" [ref=f4e116]
+                - cell "0" [ref=f4e117]
+                - cell "0" [ref=f4e118]
+                - cell "N/A" [ref=f4e119]
+          - paragraph [ref=f4e120]: "Why N/AKeep-rate is tracked going forward: a feed needs at least 10 keep/drop decisions before a number is shown."
+          - button "Add source" [ref=f4e122] [cursor=pointer]
+  - region "Notifications alt+T"

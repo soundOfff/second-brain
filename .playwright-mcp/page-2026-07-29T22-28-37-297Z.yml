@@ -1,0 +1,487 @@
+- generic [ref=f2e2]:
+  - generic [ref=f2e3]:
+    - link "Skip to content" [ref=f2e4] [cursor=pointer]:
+      - /url: "#main"
+    - navigation "Sections" [ref=f2e5]:
+      - link "Second Brain — home" [ref=f2e6] [cursor=pointer]:
+        - /url: /feed/review
+      - link "Queue" [ref=f2e12] [cursor=pointer]:
+        - /url: /feed/review
+      - link "Feeds" [ref=f2e18] [cursor=pointer]:
+        - /url: /feed/stats
+      - link "Wiki" [ref=f2e25] [cursor=pointer]:
+        - /url: /wiki
+      - link "Settings" [ref=f2e30] [cursor=pointer]:
+        - /url: /feed/settings
+    - generic [ref=f2e34]:
+      - banner [ref=f2e35]:
+        - generic [ref=f2e36]:
+          - heading "Agentic Engineering" [level=1] [ref=f2e37]
+          - generic [ref=f2e38]: concepts/agentic-engineering
+      - main [ref=f2e39]:
+        - generic [ref=f2e40]:
+          - complementary "Wiki pages" [ref=f2e41]:
+            - searchbox "Filter wiki pages" [ref=f2e44]
+            - navigation "Wiki pages" [ref=f2e45]:
+              - link "Map of content" [ref=f2e46] [cursor=pointer]:
+                - /url: /wiki
+              - generic [ref=f2e47]:
+                - generic [ref=f2e48]:
+                  - generic [ref=f2e49]: Concepts
+                  - generic [ref=f2e50]: "19"
+                - link "Agent-Native Infrastructure" [ref=f2e51] [cursor=pointer]:
+                  - /url: /wiki/concepts/agent-native-infrastructure
+                - link "Agentic Engineering" [ref=f2e53] [cursor=pointer]:
+                  - /url: /wiki/concepts/agentic-engineering
+                - link "AI Slop & Accidental Anonymity" [ref=f2e55] [cursor=pointer]:
+                  - /url: /wiki/concepts/ai-slop
+                - link "Ghosts vs. Animals" [ref=f2e57] [cursor=pointer]:
+                  - /url: /wiki/concepts/ghosts-vs-animals
+                - link "Git Worktrees (parallel isolated agent sessions)" [ref=f2e59] [cursor=pointer]:
+                  - /url: /wiki/concepts/git-worktrees
+                - link "Jagged Intelligence" [ref=f2e61] [cursor=pointer]:
+                  - /url: /wiki/concepts/jagged-intelligence
+                - link "LLM Fallback Strategy" [ref=f2e63] [cursor=pointer]:
+                  - /url: /wiki/concepts/llm-fallback-strategy
+                - link "LLM Wiki" [ref=f2e65] [cursor=pointer]:
+                  - /url: /wiki/concepts/llm-wiki
+                - link "Outsourcing Thinking vs. Understanding" [ref=f2e67] [cursor=pointer]:
+                  - /url: /wiki/concepts/outsourcing-thinking-vs-understanding
+                - link "Reinforcement Learning from Verifiable Rewards (RLVR)" [ref=f2e69] [cursor=pointer]:
+                  - /url: /wiki/concepts/reinforcement-learning-from-verifiable-rewards
+                - link "Retrieval-Augmented Generation (RAG) stub" [ref=f2e71] [cursor=pointer]:
+                  - /url: /wiki/concepts/retrieval-augmented-generation
+                  - generic [ref=f2e72]: Retrieval-Augmented Generation (RAG)
+                  - generic [ref=f2e73]: stub
+                - link "Reward hacking stub" [ref=f2e74] [cursor=pointer]:
+                  - /url: /wiki/concepts/reward-hacking
+                  - generic [ref=f2e75]: Reward hacking
+                  - generic [ref=f2e76]: stub
+                - link "Sandbox escape (AI agents) stub" [ref=f2e77] [cursor=pointer]:
+                  - /url: /wiki/concepts/sandbox-escape
+                  - generic [ref=f2e78]: Sandbox escape (AI agents)
+                  - generic [ref=f2e79]: stub
+                - link "Second Brain" [ref=f2e80] [cursor=pointer]:
+                  - /url: /wiki/concepts/second-brain
+                - link "Software 3.0" [ref=f2e82] [cursor=pointer]:
+                  - /url: /wiki/concepts/software-3-0
+                - link "The LLM App Layer (\"Cursor for X\")" [ref=f2e84] [cursor=pointer]:
+                  - /url: /wiki/concepts/llm-app-layer
+                - link "The LLM GUI (Nano Banana, neural computers)" [ref=f2e86] [cursor=pointer]:
+                  - /url: /wiki/concepts/llm-gui
+                - link "Verifiability (automate what you can verify)" [ref=f2e88] [cursor=pointer]:
+                  - /url: /wiki/concepts/verifiability
+                - link "Vibe Coding" [ref=f2e90] [cursor=pointer]:
+                  - /url: /wiki/concepts/vibe-coding
+              - generic [ref=f2e92]:
+                - generic [ref=f2e93]:
+                  - generic [ref=f2e94]: Entities
+                  - generic [ref=f2e95]: "18"
+                - link "Andrej Karpathy" [ref=f2e96] [cursor=pointer]:
+                  - /url: /wiki/entities/andrej-karpathy
+                - link "Anthropic stub" [ref=f2e98] [cursor=pointer]:
+                  - /url: /wiki/entities/anthropic
+                  - generic [ref=f2e99]: Anthropic
+                  - generic [ref=f2e100]: stub
+                - link "Claude Code" [ref=f2e101] [cursor=pointer]:
+                  - /url: /wiki/entities/claude-code
+                - link "Codex (OpenAI) stub" [ref=f2e103] [cursor=pointer]:
+                  - /url: /wiki/entities/codex
+                  - generic [ref=f2e104]: Codex (OpenAI)
+                  - generic [ref=f2e105]: stub
+                - link "Cursor stub" [ref=f2e106] [cursor=pointer]:
+                  - /url: /wiki/entities/cursor
+                  - generic [ref=f2e107]: Cursor
+                  - generic [ref=f2e108]: stub
+                - link "Datasette stub" [ref=f2e109] [cursor=pointer]:
+                  - /url: /wiki/entities/datasette
+                  - generic [ref=f2e110]: Datasette
+                  - generic [ref=f2e111]: stub
+                - link "Fireship stub" [ref=f2e112] [cursor=pointer]:
+                  - /url: /wiki/entities/fireship
+                  - generic [ref=f2e113]: Fireship
+                  - generic [ref=f2e114]: stub
+                - link "Google Gemini (Nano Banana) stub" [ref=f2e115] [cursor=pointer]:
+                  - /url: /wiki/entities/google-gemini
+                  - generic [ref=f2e116]: Google Gemini (Nano Banana)
+                  - generic [ref=f2e117]: stub
+                - link "Groq stub" [ref=f2e118] [cursor=pointer]:
+                  - /url: /wiki/entities/groq
+                  - generic [ref=f2e119]: Groq
+                  - generic [ref=f2e120]: stub
+                - link "Hugging Face stub" [ref=f2e121] [cursor=pointer]:
+                  - /url: /wiki/entities/hugging-face
+                  - generic [ref=f2e122]: Hugging Face
+                  - generic [ref=f2e123]: stub
+                - link "Obsidian stub" [ref=f2e124] [cursor=pointer]:
+                  - /url: /wiki/entities/obsidian
+                  - generic [ref=f2e125]: Obsidian
+                  - generic [ref=f2e126]: stub
+                - link "OpenAI" [ref=f2e127] [cursor=pointer]:
+                  - /url: /wiki/entities/openai
+                - link "OpenRouter stub" [ref=f2e129] [cursor=pointer]:
+                  - /url: /wiki/entities/openrouter
+                  - generic [ref=f2e130]: OpenRouter
+                  - generic [ref=f2e131]: stub
+                - link "Pyodide stub" [ref=f2e132] [cursor=pointer]:
+                  - /url: /wiki/entities/pyodide
+                  - generic [ref=f2e133]: Pyodide
+                  - generic [ref=f2e134]: stub
+                - link "Sentry stub" [ref=f2e135] [cursor=pointer]:
+                  - /url: /wiki/entities/sentry
+                  - generic [ref=f2e136]: Sentry
+                  - generic [ref=f2e137]: stub
+                - link "Sequoia Capital stub" [ref=f2e138] [cursor=pointer]:
+                  - /url: /wiki/entities/sequoia-capital
+                  - generic [ref=f2e139]: Sequoia Capital
+                  - generic [ref=f2e140]: stub
+                - link "Simon Willison" [ref=f2e141] [cursor=pointer]:
+                  - /url: /wiki/entities/simon-willison
+                - link "Tom MacWright stub" [ref=f2e143] [cursor=pointer]:
+                  - /url: /wiki/entities/tom-macwright
+                  - generic [ref=f2e144]: Tom MacWright
+                  - generic [ref=f2e145]: stub
+              - generic [ref=f2e146]:
+                - generic [ref=f2e147]:
+                  - generic [ref=f2e148]: Recaps
+                  - generic [ref=f2e149]: "75"
+                - link "Breakdown — The most interesting \"hack\" in history..." [ref=f2e150] [cursor=pointer]:
+                  - /url: /wiki/recaps/2026-07-29-the-most-interesting-hack-in-history
+                - link "Recap — 2025 LLM Year in Review" [ref=f2e152] [cursor=pointer]:
+                  - /url: /wiki/recaps/2026-06-24-2025-llm-year-in-review
+                - link "Recap — A fully local voice assistant setup" [ref=f2e154] [cursor=pointer]:
+                  - /url: /wiki/recaps/2026-06-24-a-fully-local-voice-assistant-setup
+                - 'link "Recap — A Survey of Automated Presentation Coaching: Systems, Methods, and Open Challenges" [ref=f2e156] [cursor=pointer]':
+                  - /url: /wiki/recaps/2026-06-29-a-survey-of-automated-presentation-coaching-systems-methods
+                - 'link "Recap — Agent memory on Elasticsearch: hybrid retrieval and DLS" [ref=f2e158] [cursor=pointer]':
+                  - /url: /wiki/recaps/2026-06-29-agent-memory-on-elasticsearch-hybrid-retrieval-and-dls
+                - link "Recap — AI children's books, body horror edition" [ref=f2e160] [cursor=pointer]:
+                  - /url: /wiki/recaps/2026-06-29-ai-children-s-books-body-horror-edition
+                - link "Recap — AI's Affordability Crisis" [ref=f2e162] [cursor=pointer]:
+                  - /url: /wiki/recaps/2026-06-24-ai-s-affordability-crisis
+                - link "Recap — Animals vs Ghosts" [ref=f2e164] [cursor=pointer]:
+                  - /url: /wiki/recaps/2026-07-06-animals-vs-ghosts
+                - 'link "Recap — Apertus: Open Foundation Model for Sovereign AI" [ref=f2e166] [cursor=pointer]':
+                  - /url: /wiki/recaps/2026-06-24-apertus-open-foundation-model-for-sovereign-ai
+                - link "Recap — Asian AI startups launch Mythos-like models" [ref=f2e168] [cursor=pointer]:
+                  - /url: /wiki/recaps/2026-06-29-asian-ai-startups-launch-mythos-like-models
+                - link "Recap — Attention Is All You Need, Revisited" [ref=f2e170] [cursor=pointer]:
+                  - /url: /wiki/recaps/2026-06-22-attention-is-all-you-need-revisited
+                - 'link "Recap — Build a Second Brain: Karpathy''s LLM Wiki Method" [ref=f2e172] [cursor=pointer]':
+                  - /url: /wiki/recaps/2026-06-23-karpathy-llm-wiki
+                - link "Recap — Building Reliable Agentic AI Systems" [ref=f2e174] [cursor=pointer]:
+                  - /url: /wiki/recaps/2026-06-24-building-reliable-agentic-ai-systems
+                - 'link "Recap — Causal Connections: Leveraging Multilingual Fine-Tuning for Financial QA@FinCausal 2026" [ref=f2e176] [cursor=pointer]':
+                  - /url: /wiki/recaps/2026-06-29-causal-connections-leveraging-multilingual-fine-tuning-for-f
+                - link "Recap — Chatbots vs Ozone" [ref=f2e178] [cursor=pointer]:
+                  - /url: /wiki/recaps/2026-06-29-chatbots-vs-ozone
+                - link "Recap — Comparing Transformers and Hybrid Models at the Token Level" [ref=f2e180] [cursor=pointer]:
+                  - /url: /wiki/recaps/2026-06-29-comparing-transformers-and-hybrid-models-at-the-token-level
+                - link "Recap — datasette 1.0a35" [ref=f2e182] [cursor=pointer]:
+                  - /url: /wiki/recaps/2026-06-24-datasette-1-0a35
+                - link "Recap — Don't Use AI to Write Things That You Present as Your Own Work" [ref=f2e184] [cursor=pointer]:
+                  - /url: /wiki/recaps/2026-06-24-don-t-use-ai-to-write-things-that-you-present-as-your-own-wo
+                - link "Recap — Evaluating LLM Usage for Efficient and Explainable Numerical and Classified Implicit Sentiment Analysis of Product Desirability" [ref=f2e186] [cursor=pointer]:
+                  - /url: /wiki/recaps/2026-06-24-evaluating-llm-usage-for-efficient-and-explainable-numerical
+                - 'link "Recap — Event Tensor: A Unified Abstraction for Compiling Dynamic Megakernels" [ref=f2e188] [cursor=pointer]':
+                  - /url: /wiki/recaps/2026-06-24-event-tensor-a-unified-abstraction-for-compiling-dynamic-meg
+                - 'link "Recap — EXPO-SQL: Execution-based Clause-level Policy Optimization for Text-to-SQL" [ref=f2e190] [cursor=pointer]':
+                  - /url: /wiki/recaps/2026-06-24-expo-sql-execution-based-clause-level-policy-optimization-fo
+                - link "Recap — Finding the Best Sleep Tracker" [ref=f2e192] [cursor=pointer]:
+                  - /url: /wiki/recaps/2026-07-25-finding-the-best-sleep-tracker
+                - link "Recap — For Most of the World, Open-Source AI Is the Only Way Forward" [ref=f2e194] [cursor=pointer]:
+                  - /url: /wiki/recaps/2026-06-24-for-most-of-the-world-open-source-ai-is-the-only-way-forward
+                - link "Recap — Ford hired AI and sacked humans. It backfired badly" [ref=f2e196] [cursor=pointer]:
+                  - /url: /wiki/recaps/2026-06-29-ford-hired-ai-and-sacked-humans-it-backfired-badly
+                - link "Recap — Ford rehires 'gray beard' engineers after AI falls short" [ref=f2e198] [cursor=pointer]:
+                  - /url: /wiki/recaps/2026-06-29-ford-rehires-gray-beard-engineers-after-ai-falls-short
+                - 'link "Recap — Formalizing Latent Thoughts: Four Axioms of Thought Representation in LLMs" [ref=f2e200] [cursor=pointer]':
+                  - /url: /wiki/recaps/2026-06-29-formalizing-latent-thoughts-four-axioms-of-thought-represent
+                - 'link "Recap — GPT2-BASIC: Portable Machine Intelligence in BASIC" [ref=f2e202] [cursor=pointer]':
+                  - /url: /wiki/recaps/2026-06-29-gpt2-basic-portable-machine-intelligence-in-basic
+                - 'link "Recap — HN thread: are local LLMs finally good enough?" [ref=f2e204] [cursor=pointer]':
+                  - /url: /wiki/recaps/2026-06-23-hn-thread-on-local-llms
+                - 'link "Recap — Introducing A2UI: An Open Project for Agent-Driven Interfaces" [ref=f2e206] [cursor=pointer]':
+                  - /url: /wiki/recaps/2026-07-03-introducing-a2ui-an-open-project-for-agent-driven-interfaces
+                - link "Recap — Introducing Claude Opus 5" [ref=f2e208] [cursor=pointer]:
+                  - /url: /wiki/recaps/2026-07-25-introducing-claude-opus-5
+                - link "Recap — MAX models can now run on Apple silicon GPUs" [ref=f2e210] [cursor=pointer]:
+                  - /url: /wiki/recaps/2026-06-29-max-models-can-now-run-on-apple-silicon-gpus
+                - link "Recap — Meta pauses AI training program tracking employee keystrokes after internal leak" [ref=f2e212] [cursor=pointer]:
+                  - /url: /wiki/recaps/2026-06-24-meta-pauses-ai-training-program-tracking-employee-keystrokes
+                - 'link "Recap — ModTGCN: Modularity-aware Graph Neural Networks for Text Classification" [ref=f2e214] [cursor=pointer]':
+                  - /url: /wiki/recaps/2026-06-24-modtgcn-modularity-aware-graph-neural-networks-for-text-clas
+                - 'link "Recap — Munich 1991: the Roots of the Current AI Boom" [ref=f2e216] [cursor=pointer]':
+                  - /url: /wiki/recaps/2026-06-24-munich-1991-the-roots-of-the-current-ai-boom
+                - link "Recap — Nano Banana 2 Lite" [ref=f2e218] [cursor=pointer]:
+                  - /url: /wiki/recaps/2026-07-01-nano-banana-2-lite
+                - link "Recap — OPFS + Pyodide test harness" [ref=f2e220] [cursor=pointer]:
+                  - /url: /wiki/recaps/2026-06-24-opfs-pyodide-test-harness
+                - 'link "Recap — Position: The Term \\\"Machine Unlearning\\\" Is Overused in LLMs" [ref=f2e222] [cursor=pointer]':
+                  - /url: /wiki/recaps/2026-06-29-position-the-term-machine-unlearning-is-overused-in-llms
+                - 'link "Recap — Power to the People: How LLMs Flip the Script on Technology Diffusion" [ref=f2e224] [cursor=pointer]':
+                  - /url: /wiki/recaps/2026-07-25-power-to-the-people-how-llms-flip-the-script-on-technology-d
+                - link "Recap — Professor Denounces Mass AI Fraud on an Exam at Brown" [ref=f2e226] [cursor=pointer]:
+                  - /url: /wiki/recaps/2026-06-29-professor-denounces-mass-ai-fraud-on-an-exam-at-brown
+                - link "Recap — Prompt Injection as Role Confusion" [ref=f2e228] [cursor=pointer]:
+                  - /url: /wiki/recaps/2026-06-24-prompt-injection-as-role-confusion
+                - link "Recap — Quantifying Prior Dominance in RAG Systems" [ref=f2e230] [cursor=pointer]:
+                  - /url: /wiki/recaps/2026-06-24-quantifying-prior-dominance-in-rag-systems
+                - link "Recap — Quoting Anthropic" [ref=f2e232] [cursor=pointer]:
+                  - /url: /wiki/recaps/2026-07-01-quoting-anthropic
+                - link "Recap — Quoting Boris Cherny" [ref=f2e234] [cursor=pointer]:
+                  - /url: /wiki/recaps/2026-07-25-quoting-boris-cherny
+                - link "Recap — Quoting Tom MacWright" [ref=f2e236] [cursor=pointer]:
+                  - /url: /wiki/recaps/2026-06-24-quoting-tom-macwright
+                - link "Recap — Reid Hoffman says SpaceX 'not an AI company', xAI 'complete train wreck" [ref=f2e238] [cursor=pointer]:
+                  - /url: /wiki/recaps/2026-06-24-reid-hoffman-says-spacex-not-an-ai-company-xai-complete-trai
+                - link "Recap — Reverse Engineering the Qualcomm NPU Compiler" [ref=f2e240] [cursor=pointer]:
+                  - /url: /wiki/recaps/2026-06-29-reverse-engineering-the-qualcomm-npu-compiler
+                - 'link "Recap — RubyLLM: A Ruby Framework for All Major AI Providers" [ref=f2e242] [cursor=pointer]':
+                  - /url: /wiki/recaps/2026-06-24-rubyllm-a-ruby-framework-for-all-major-ai-providers
+                - link "Recap — Run parallel sessions with worktrees (Claude Code Docs)" [ref=f2e244] [cursor=pointer]:
+                  - /url: /wiki/recaps/2026-06-24-run-parallel-sessions-with-worktrees-claude-code-docs
+                - link "Recap — Self-Recognition Finetuning can Prevent and Reverse Emergent Misalignment" [ref=f2e246] [cursor=pointer]:
+                  - /url: /wiki/recaps/2026-06-24-self-recognition-finetuning-can-prevent-and-reverse-emergent
+                - link "Recap — Sequoia Ascent 2026 Summary" [ref=f2e248] [cursor=pointer]:
+                  - /url: /wiki/recaps/2026-06-24-sequoia-ascent-2026-summary
+                - link "Recap — sqlite-utils 4.0rc2" [ref=f2e250] [cursor=pointer]:
+                  - /url: /wiki/recaps/2026-07-06-sqlite-utils-4-0rc2
+                - link "Recap — sqlite-utils 4.0rc2, mostly written by Claude Fable (for about $149.25)" [ref=f2e252] [cursor=pointer]:
+                  - /url: /wiki/recaps/2026-07-06-sqlite-utils-4-0rc2-mostly-written-by-claude-fable-for-about
+                - link "Recap — sqlite-utils 4.0rc3" [ref=f2e254] [cursor=pointer]:
+                  - /url: /wiki/recaps/2026-07-06-sqlite-utils-4-0rc3
+                - link "Recap — Stanford CME295 Transformers & LLMs | Lecture 8 – LLM Evaluation" [ref=f2e256] [cursor=pointer]:
+                  - /url: /wiki/recaps/2026-07-03-stanford-cme295-transformers-llms
+                - 'link "Recap — Supersede: Diagnosing and Training the Memory-Update Gap in LLM Agents" [ref=f2e258] [cursor=pointer]':
+                  - /url: /wiki/recaps/2026-06-29-supersede-diagnosing-and-training-the-memory-update-gap-in-l
+                - link "Recap — Testing from extension (test artifact) stub" [ref=f2e260] [cursor=pointer]:
+                  - /url: /wiki/recaps/2026-06-23-testing-from-extension
+                  - generic [ref=f2e261]: Recap — Testing from extension (test artifact)
+                  - generic [ref=f2e262]: stub
+                - link "Recap — The 100,000 Whys of AI" [ref=f2e263] [cursor=pointer]:
+                  - /url: /wiki/recaps/2026-06-24-the-100k-whys-of-ai
+                - link "Recap — The AI industry is pouring millions into US elections stub" [ref=f2e265] [cursor=pointer]:
+                  - /url: /wiki/recaps/2026-06-29-the-ai-industry-is-pouring-millions-into-us-elections
+                  - generic [ref=f2e266]: Recap — The AI industry is pouring millions into US elections
+                  - generic [ref=f2e267]: stub
+                - link "Recap — The best response to AI slop and online noise is from Robin Williams" [ref=f2e268] [cursor=pointer]:
+                  - /url: /wiki/recaps/2026-06-29-the-best-response-to-ai-slop-and-online-noise-is-from-robin
+                - link "Recap — The first known runaway AI agent - or a very bad marketing stunt?" [ref=f2e270] [cursor=pointer]:
+                  - /url: /wiki/recaps/2026-07-25-the-first-known-runaway-ai-agent-or-a-very-bad-marketing-stu
+                - link "Recap — The Future of the Con Is Already Here, It's Just Not Evenly Distributed" [ref=f2e272] [cursor=pointer]:
+                  - /url: /wiki/recaps/2026-06-29-the-future-of-the-con-is-already-here-it-s-just-not-evenly-d
+                - 'link "Recap — The Groq outage: a cleanup function with no fallback" [ref=f2e274] [cursor=pointer]':
+                  - /url: /wiki/recaps/2026-06-23-one-that-sticks-with-me-i-had-to-build-a-cleanup-function-fo
+                - link "Recap — The Low-Tech AI Of Elden Ring" [ref=f2e276] [cursor=pointer]:
+                  - /url: /wiki/recaps/2026-06-24-the-low-tech-ai-of-elden-ring
+                - link "Recap — The Space of Minds" [ref=f2e278] [cursor=pointer]:
+                  - /url: /wiki/recaps/2026-07-01-the-space-of-minds
+                - link "Recap — The Three Flavors of Generative UI" [ref=f2e280] [cursor=pointer]:
+                  - /url: /wiki/recaps/2026-07-03-the-three-flavors-of-generative-ui
+                - 'link "Recap — TIRx: An Open Compiler Stack for Evolving Frontier ML Kernels" [ref=f2e282] [cursor=pointer]':
+                  - /url: /wiki/recaps/2026-06-24-tirx-an-open-compiler-stack-for-evolving-frontier-ml-kernels
+                - link "Recap — U.S. allows Anthropic to release Mythos AI to 'trusted' US organizations" [ref=f2e284] [cursor=pointer]:
+                  - /url: /wiki/recaps/2026-06-29-u-s-allows-anthropic-to-release-mythos-ai-to-trusted-us-orga
+                - 'link "Recap — Unlimited-OCR: One-shot Long-horizon OCR" [ref=f2e286] [cursor=pointer]':
+                  - /url: /wiki/recaps/2026-06-24-unlimited-ocr-one-shot-long-horizon-ocr
+                - link "Recap — Using the Gini Coefficient to Plan Edge Capacity" [ref=f2e288] [cursor=pointer]:
+                  - /url: /wiki/recaps/2026-06-24-using-the-gini-coefficient-to-plan-edge-capacity
+                - link "Recap — Verifiability" [ref=f2e290] [cursor=pointer]:
+                  - /url: /wiki/recaps/2026-07-01-verifiability
+                - link "Recap — Vibe coding MenuGen" [ref=f2e292] [cursor=pointer]:
+                  - /url: /wiki/recaps/2026-07-06-vibe-coding-menugen
+                - 'link "Recap — VibeThinker-3B: Exploring the Frontier of Verifiable Reasoning in Small Language Models" [ref=f2e294] [cursor=pointer]':
+                  - /url: /wiki/recaps/2026-06-24-vibethinker-3b-exploring-the-frontier-of-verifiable-reasonin
+                - link "Recap — What it Means to Be a Mathematician When AI Does the Math" [ref=f2e296] [cursor=pointer]:
+                  - /url: /wiki/recaps/2026-06-29-ai-in-mathematics-is-forcing-big-questions
+                - link "Recap — What's New in Claude Sonnet 5" [ref=f2e298] [cursor=pointer]:
+                  - /url: /wiki/recaps/2026-07-01-what-s-new-in-claude-sonnet-5
+                - link "Recap — Your Worker can now have its own cache in front of it" [ref=f2e300] [cursor=pointer]:
+                  - /url: /wiki/recaps/2026-07-06-your-worker-can-now-have-its-own-cache-in-front-of-it
+          - article [ref=f2e303]:
+            - generic [ref=f2e304]:
+              - generic [ref=f2e305]:
+                - generic [ref=f2e306]: concept
+                - generic [ref=f2e307]: active
+                - generic [ref=f2e308]: updated 2026-06-26
+              - heading "Agentic Engineering" [level=2] [ref=f2e309]
+              - generic [ref=f2e310]:
+                - generic [ref=f2e311]: "#llm"
+                - generic [ref=f2e312]: "#agentic-coding"
+                - generic [ref=f2e313]: "#engineering"
+                - generic [ref=f2e314]: "#software"
+                - generic [ref=f2e315]: "#ai"
+            - generic [ref=f2e316]:
+              - heading "Agentic Engineering" [level=3] [ref=f2e317]
+              - paragraph [ref=f2e318]:
+                - text: The
+                - strong [ref=f2e319]: professional engineering discipline
+                - text: of coordinating fallible, stochastic agents to go faster
+                - strong [ref=f2e320]: while preserving the quality bar
+                - text: — correctness, security, taste, and maintainability
+                - link "[2026-06-24-sequoia-ascent-2026-summary]" [ref=f2e321] [cursor=pointer]:
+                  - /url: /wiki/source/2026-06-24-sequoia-ascent-2026-summary
+                - text: .
+                - link "entities/andrej-karpathy" [ref=f2e322] [cursor=pointer]:
+                  - /url: /wiki/entities/andrej-karpathy
+                - text: contrasts it with
+                - link "concepts/vibe-coding" [ref=f2e323] [cursor=pointer]:
+                  - /url: /wiki/concepts/vibe-coding
+                - text: ":"
+              - blockquote [ref=f2e324]:
+                - paragraph [ref=f2e325]:
+                  - text: Vibe coding raises the
+                  - strong [ref=f2e326]: floor
+                  - text: . Agentic engineering raises the
+                  - strong [ref=f2e327]: ceiling
+                - paragraph [ref=f2e328]:
+                  - link "[2026-06-24-sequoia-ascent-2026-summary]" [ref=f2e329] [cursor=pointer]:
+                    - /url: /wiki/source/2026-06-24-sequoia-ascent-2026-summary
+                  - text: .
+              - paragraph [ref=f2e330]:
+                - text: The agentic engineer does not blindly accept generated code. They
+                - strong [ref=f2e331]: design specs, supervise plans, inspect diffs, write tests, build evaluation loops, manage permissions, isolate worktrees, and preserve quality
+                - link "[2026-06-24-sequoia-ascent-2026-summary]" [ref=f2e332] [cursor=pointer]:
+                  - /url: /wiki/source/2026-06-24-sequoia-ascent-2026-summary
+                - text: . The unit of work shifts from typing lines to delegating "macro actions" (implement a feature, refactor a subsystem, research a library) — the programmer becomes an
+                - strong [ref=f2e333]: orchestrator of agents
+                - link "[2026-06-24-sequoia-ascent-2026-summary]" [ref=f2e334] [cursor=pointer]:
+                  - /url: /wiki/source/2026-06-24-sequoia-ascent-2026-summary
+                - text: .
+              - heading "Why human judgment stays essential" [level=4] [ref=f2e335]
+              - paragraph [ref=f2e336]:
+                - text: Agents are spiky (
+                - link "concepts/jagged-intelligence" [ref=f2e337] [cursor=pointer]:
+                  - /url: /wiki/concepts/jagged-intelligence
+                - text: ). Karpathy's MenuGen payment bug — the agent matched Stripe purchases to Google logins by
+                - strong [ref=f2e338]: email address
+                - text: instead of using a
+                - strong [ref=f2e339]: persistent user ID
+                - text: — is "plausible code, but bad system design"
+                - link "[2026-06-24-sequoia-ascent-2026-summary]" [ref=f2e340] [cursor=pointer]:
+                  - /url: /wiki/source/2026-06-24-sequoia-ascent-2026-summary
+                - text: . The frontier skill is
+                - strong [ref=f2e341]: not
+                - text: memorizing API details (agents recall whether a tensor lib uses
+                - code [ref=f2e342]: dim
+                - text: /
+                - code [ref=f2e343]: axis
+                - text: /
+                - code [ref=f2e344]: keepdim
+                - text: /
+                - code [ref=f2e345]: reshape
+                - text: /
+                - code [ref=f2e346]: permute
+                - text: ); the human must understand the underlying concepts — storage, views, memory copies, invariants, identity, security boundaries, system shape
+                - link "[2026-06-24-sequoia-ascent-2026-summary]" [ref=f2e347] [cursor=pointer]:
+                  - /url: /wiki/source/2026-06-24-sequoia-ascent-2026-summary
+                - text: . This is why
+                - link "concepts/outsourcing-thinking-vs-understanding|understanding stays the bottleneck" [ref=f2e348] [cursor=pointer]:
+                  - /url: /wiki/concepts/outsourcing-thinking-vs-understanding|understanding stays the bottleneck
+                - text: .
+              - heading "Tooling" [level=4] [ref=f2e349]
+              - paragraph [ref=f2e350]:
+                - text: Mechanisms that support the discipline include
+                - link "concepts/git-worktrees" [ref=f2e351] [cursor=pointer]:
+                  - /url: /wiki/concepts/git-worktrees
+                - text: (isolate parallel edits so one session/subagent never corrupts another) and subagents/agent teams (coordinate the work itself)
+                - link "[2026-06-24-run-parallel-sessions-with-worktrees-claude-code-docs]" [ref=f2e352] [cursor=pointer]:
+                  - /url: /wiki/source/2026-06-24-run-parallel-sessions-with-worktrees-claude-code-docs
+                - text: . Tools like
+                - link "entities/claude-code" [ref=f2e353] [cursor=pointer]:
+                  - /url: /wiki/entities/claude-code
+                - text: ","
+                - link "entities/codex" [ref=f2e354] [cursor=pointer]:
+                  - /url: /wiki/entities/codex
+                - text: ", and"
+                - link "entities/cursor" [ref=f2e355] [cursor=pointer]:
+                  - /url: /wiki/entities/cursor
+                - text: are the current environment; you invest in your setup as engineers always did with Vim or VS Code
+                - link "[2026-06-24-sequoia-ascent-2026-summary]" [ref=f2e356] [cursor=pointer]:
+                  - /url: /wiki/source/2026-06-24-sequoia-ascent-2026-summary
+                - text: .
+              - heading "Implications" [level=4] [ref=f2e357]
+              - list [ref=f2e358]:
+                - listitem [ref=f2e359]:
+                  - strong [ref=f2e360]: "Hiring should change:"
+                  - text: replace coding puzzles with "build a substantial project with
+              - paragraph [ref=f2e361]:
+                - text: agents, deploy it, secure it, then have adversarial agents try to break it"
+                - link "[2026-06-24-sequoia-ascent-2026-summary]" [ref=f2e362] [cursor=pointer]:
+                  - /url: /wiki/source/2026-06-24-sequoia-ascent-2026-summary
+                - text: .
+              - list [ref=f2e363]:
+                - listitem [ref=f2e364]:
+                  - strong [ref=f2e365]: "The 10x engineer becomes more extreme:"
+                  - text: people who master agentic workflows may
+              - paragraph [ref=f2e366]:
+                - text: outperform others "by far more than 10x" — using agents as leverage rather than producing slop (
+                - link "concepts/ai-slop" [ref=f2e367] [cursor=pointer]:
+                  - /url: /wiki/concepts/ai-slop
+                - text: )
+                - link "[2026-06-24-sequoia-ascent-2026-summary]" [ref=f2e368] [cursor=pointer]:
+                  - /url: /wiki/source/2026-06-24-sequoia-ascent-2026-summary
+                - text: .
+            - generic [ref=f2e369]:
+              - generic [ref=f2e370]:
+                - heading "Sources" [level=3] [ref=f2e371]
+                - list [ref=f2e372]:
+                  - listitem [ref=f2e373]:
+                    - link "2026-06-24-sequoia-ascent-2026-summary" [ref=f2e374] [cursor=pointer]:
+                      - /url: /wiki/source/2026-06-24-sequoia-ascent-2026-summary
+                  - listitem [ref=f2e378]:
+                    - link "2026-06-24-run-parallel-sessions-with-worktrees-claude-code-docs" [ref=f2e379] [cursor=pointer]:
+                      - /url: /wiki/source/2026-06-24-run-parallel-sessions-with-worktrees-claude-code-docs
+              - generic [ref=f2e383]:
+                - heading "Backlinks" [level=3] [ref=f2e384]
+                - list [ref=f2e385]:
+                  - listitem [ref=f2e386]:
+                    - link "AI Slop & Accidental Anonymity" [ref=f2e387] [cursor=pointer]:
+                      - /url: /wiki/concepts/ai-slop
+                  - listitem [ref=f2e392]:
+                    - link "Ghosts vs. Animals" [ref=f2e393] [cursor=pointer]:
+                      - /url: /wiki/concepts/ghosts-vs-animals
+                  - listitem [ref=f2e398]:
+                    - link "Git Worktrees (parallel isolated agent sessions)" [ref=f2e399] [cursor=pointer]:
+                      - /url: /wiki/concepts/git-worktrees
+                  - listitem [ref=f2e404]:
+                    - link "Jagged Intelligence" [ref=f2e405] [cursor=pointer]:
+                      - /url: /wiki/concepts/jagged-intelligence
+                  - listitem [ref=f2e410]:
+                    - link "Outsourcing Thinking vs. Understanding" [ref=f2e411] [cursor=pointer]:
+                      - /url: /wiki/concepts/outsourcing-thinking-vs-understanding
+                  - listitem [ref=f2e416]:
+                    - link "Sandbox escape (AI agents)" [ref=f2e417] [cursor=pointer]:
+                      - /url: /wiki/concepts/sandbox-escape
+                  - listitem [ref=f2e422]:
+                    - link "Software 3.0" [ref=f2e423] [cursor=pointer]:
+                      - /url: /wiki/concepts/software-3-0
+                  - listitem [ref=f2e428]:
+                    - link "Vibe Coding" [ref=f2e429] [cursor=pointer]:
+                      - /url: /wiki/concepts/vibe-coding
+                  - listitem [ref=f2e434]:
+                    - link "Andrej Karpathy" [ref=f2e435] [cursor=pointer]:
+                      - /url: /wiki/entities/andrej-karpathy
+                  - listitem [ref=f2e440]:
+                    - link "Claude Code" [ref=f2e441] [cursor=pointer]:
+                      - /url: /wiki/entities/claude-code
+                  - listitem [ref=f2e446]:
+                    - link "Codex (OpenAI)" [ref=f2e447] [cursor=pointer]:
+                      - /url: /wiki/entities/codex
+                  - listitem [ref=f2e452]:
+                    - link "Cursor" [ref=f2e453] [cursor=pointer]:
+                      - /url: /wiki/entities/cursor
+                  - listitem [ref=f2e458]:
+                    - link "Sequoia Capital" [ref=f2e459] [cursor=pointer]:
+                      - /url: /wiki/entities/sequoia-capital
+                  - listitem [ref=f2e464]:
+                    - link "Second Brain — Map of Content" [ref=f2e465] [cursor=pointer]:
+                      - /url: /wiki/index
+                  - listitem [ref=f2e470]:
+                    - link "Recap — Sequoia Ascent 2026 Summary" [ref=f2e471] [cursor=pointer]:
+                      - /url: /wiki/recaps/2026-06-24-sequoia-ascent-2026-summary
+                  - listitem [ref=f2e476]:
+                    - link "Breakdown — The most interesting \"hack\" in history..." [ref=f2e477] [cursor=pointer]:
+                      - /url: /wiki/recaps/2026-07-29-the-most-interesting-hack-in-history
+  - region "Notifications alt+T"

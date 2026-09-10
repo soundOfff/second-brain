@@ -1,0 +1,392 @@
+- generic [ref=f3e2]:
+  - generic [ref=f3e3]:
+    - link "Skip to content" [ref=f3e4] [cursor=pointer]:
+      - /url: "#main"
+    - navigation "Sections" [ref=f3e5]:
+      - link "Second Brain — home" [ref=f3e6] [cursor=pointer]:
+        - /url: /feed/review
+      - link "Queue" [ref=f3e12] [cursor=pointer]:
+        - /url: /feed/review
+      - link "Feeds" [ref=f3e18] [cursor=pointer]:
+        - /url: /feed/stats
+      - link "Wiki" [ref=f3e25] [cursor=pointer]:
+        - /url: /wiki
+      - link "Settings" [ref=f3e30] [cursor=pointer]:
+        - /url: /feed/settings
+    - generic [ref=f3e34]:
+      - banner [ref=f3e35]:
+        - generic [ref=f3e36]:
+          - heading "Review Queue" [level=1] [ref=f3e37]
+          - generic [ref=f3e38]: live queue · 23 pending
+        - button "Rescan the queue from disk" [ref=f3e40] [cursor=pointer]:
+          - generic [ref=f3e46]: Rescan
+          - generic [ref=f3e47]: ⇧r
+      - main [ref=f3e48]:
+        - generic [ref=f3e49]:
+          - complementary "Review queue" [ref=f3e50]:
+            - generic [ref=f3e51]:
+              - heading "Queue" [level=2] [ref=f3e52]
+              - generic [ref=f3e53]: "23"
+            - progressbar "Session progress" [ref=f3e55]
+            - list [ref=f3e56]:
+              - listitem [ref=f3e57]:
+                - button "A global workspace in language models lobsters-ai article" [ref=f3e58]:
+                  - generic [ref=f3e59]: "1"
+                  - generic [ref=f3e60]:
+                    - generic [ref=f3e61]: A global workspace in language models
+                    - generic [ref=f3e63]:
+                      - generic [ref=f3e64]: lobsters-ai
+                      - generic [ref=f3e65]: article
+              - listitem [ref=f3e66]:
+                - button "A Prolog library for interfacing with LLMs lobsters-ai article" [ref=f3e67]:
+                  - generic [ref=f3e68]: "2"
+                  - generic [ref=f3e69]:
+                    - generic [ref=f3e70]: A Prolog library for interfacing with LLMs
+                    - generic [ref=f3e72]:
+                      - generic [ref=f3e73]: lobsters-ai
+                      - generic [ref=f3e74]: article
+              - listitem [ref=f3e75]:
+                - button "After the AI Crash hn-ai article" [ref=f3e76]:
+                  - generic [ref=f3e77]: "3"
+                  - generic [ref=f3e78]:
+                    - generic [ref=f3e79]: After the AI Crash
+                    - generic [ref=f3e81]:
+                      - generic [ref=f3e82]: hn-ai
+                      - generic [ref=f3e83]: article
+              - listitem [ref=f3e84]:
+                - button "AI companies are shredding rare books hn-ai article" [ref=f3e85]:
+                  - generic [ref=f3e86]: "4"
+                  - generic [ref=f3e87]:
+                    - generic [ref=f3e88]: AI companies are shredding rare books
+                    - generic [ref=f3e90]:
+                      - generic [ref=f3e91]: hn-ai
+                      - generic [ref=f3e92]: article
+              - listitem [ref=f3e93]:
+                - button "AI Surveillance and Social Progress lobsters-ai article" [ref=f3e94]:
+                  - generic [ref=f3e95]: "5"
+                  - generic [ref=f3e96]:
+                    - generic [ref=f3e97]: AI Surveillance and Social Progress
+                    - generic [ref=f3e99]:
+                      - generic [ref=f3e100]: lobsters-ai
+                      - generic [ref=f3e101]: article
+              - listitem [ref=f3e102]:
+                - button "Apple Will 'Watch Everything Burn' When the AI Bubble Bursts hn-ai article" [ref=f3e103]:
+                  - generic [ref=f3e104]: "6"
+                  - generic [ref=f3e105]:
+                    - generic [ref=f3e106]: Apple Will 'Watch Everything Burn' When the AI Bubble Bursts
+                    - generic [ref=f3e108]:
+                      - generic [ref=f3e109]: hn-ai
+                      - generic [ref=f3e110]: article
+              - listitem [ref=f3e111]:
+                - button "Cloudflare's new AI traffic options for customers hn-ai article" [ref=f3e112]:
+                  - generic [ref=f3e113]: "7"
+                  - generic [ref=f3e114]:
+                    - generic [ref=f3e115]: Cloudflare's new AI traffic options for customers
+                    - generic [ref=f3e117]:
+                      - generic [ref=f3e118]: hn-ai
+                      - generic [ref=f3e119]: article
+              - listitem [ref=f3e120]:
+                - 'button "CogArena: A Multimethod Evaluation of Cognitive Ability Structure in Large Language Models arxiv-cs-cl article" [ref=f3e121]':
+                  - generic [ref=f3e122]: "8"
+                  - generic [ref=f3e123]:
+                    - generic [ref=f3e124]: "CogArena: A Multimethod Evaluation of Cognitive Ability Structure in Large Language Models"
+                    - generic [ref=f3e126]:
+                      - generic [ref=f3e127]: arxiv-cs-cl
+                      - generic [ref=f3e128]: article
+              - listitem [ref=f3e129]:
+                - button "Document-borne AI worms can self-propagate through Copilot for Word NOW hn-ai article" [ref=f3e130]:
+                  - generic [ref=f3e131]: "9"
+                  - generic [ref=f3e132]:
+                    - generic [ref=f3e133]:
+                      - generic [ref=f3e134]: Document-borne AI worms can self-propagate through Copilot for Word
+                      - generic [ref=f3e135]: NOW
+                    - generic [ref=f3e136]:
+                      - generic [ref=f3e137]: hn-ai
+                      - generic [ref=f3e138]: article
+              - listitem [ref=f3e139]:
+                - button "Full-Pipeline Inference Optimization for MiMo-V2.5 Series lobsters-ai article" [ref=f3e140]:
+                  - generic [ref=f3e141]: "10"
+                  - generic [ref=f3e142]:
+                    - generic [ref=f3e143]: Full-Pipeline Inference Optimization for MiMo-V2.5 Series
+                    - generic [ref=f3e145]:
+                      - generic [ref=f3e146]: lobsters-ai
+                      - generic [ref=f3e147]: article
+              - listitem [ref=f3e148]:
+                - button "Google’s exponential path to climate-wrecking digital bloat lobsters-ai article" [ref=f3e149]:
+                  - generic [ref=f3e150]: "11"
+                  - generic [ref=f3e151]:
+                    - generic [ref=f3e152]: Google’s exponential path to climate-wrecking digital bloat
+                    - generic [ref=f3e154]:
+                      - generic [ref=f3e155]: lobsters-ai
+                      - generic [ref=f3e156]: article
+              - listitem [ref=f3e157]:
+                - button "Languages as designed latent spaces lobsters-ai article" [ref=f3e158]:
+                  - generic [ref=f3e159]: "12"
+                  - generic [ref=f3e160]:
+                    - generic [ref=f3e161]: Languages as designed latent spaces
+                    - generic [ref=f3e163]:
+                      - generic [ref=f3e164]: lobsters-ai
+                      - generic [ref=f3e165]: article
+              - listitem [ref=f3e166]:
+                - button "LearnVector – Andrew Ng's AI company building one‑to‑one learning experiences hn-ai article" [ref=f3e167]:
+                  - generic [ref=f3e168]: "13"
+                  - generic [ref=f3e169]:
+                    - generic [ref=f3e170]: LearnVector – Andrew Ng's AI company building one‑to‑one learning experiences
+                    - generic [ref=f3e172]:
+                      - generic [ref=f3e173]: hn-ai
+                      - generic [ref=f3e174]: article
+              - listitem [ref=f3e175]:
+                - button "Measuring and Improving Behavioral Consistency in Large Language Models through Fact-Heuristic-Emotion State Enforcement arxiv-cs-cl article" [ref=f3e176]:
+                  - generic [ref=f3e177]: "14"
+                  - generic [ref=f3e178]:
+                    - generic [ref=f3e179]: Measuring and Improving Behavioral Consistency in Large Language Models through Fact-Heuristic-Emotion State Enforcement
+                    - generic [ref=f3e181]:
+                      - generic [ref=f3e182]: arxiv-cs-cl
+                      - generic [ref=f3e183]: article
+              - listitem [ref=f3e184]:
+                - button "Native-speed vLLM transformers modeling backend lobsters-ai article" [ref=f3e185]:
+                  - generic [ref=f3e186]: "15"
+                  - generic [ref=f3e187]:
+                    - generic [ref=f3e188]: Native-speed vLLM transformers modeling backend
+                    - generic [ref=f3e190]:
+                      - generic [ref=f3e191]: lobsters-ai
+                      - generic [ref=f3e192]: article
+              - listitem [ref=f3e193]:
+                - 'button "Neuromorphic Diffusion Language Models: Addressing Compute and Memory Bottlenecks via Sparsity and Block Denoising arxiv-cs-cl article" [ref=f3e194]':
+                  - generic [ref=f3e195]: "16"
+                  - generic [ref=f3e196]:
+                    - generic [ref=f3e197]: "Neuromorphic Diffusion Language Models: Addressing Compute and Memory Bottlenecks via Sparsity and Block Denoising"
+                    - generic [ref=f3e199]:
+                      - generic [ref=f3e200]: arxiv-cs-cl
+                      - generic [ref=f3e201]: article
+              - listitem [ref=f3e202]:
+                - button "Professor's invisible prompt trap catches 32/35 students cheating with AI hn-ai article" [ref=f3e203]:
+                  - generic [ref=f3e204]: "17"
+                  - generic [ref=f3e205]:
+                    - generic [ref=f3e206]: Professor's invisible prompt trap catches 32/35 students cheating with AI
+                    - generic [ref=f3e208]:
+                      - generic [ref=f3e209]: hn-ai
+                      - generic [ref=f3e210]: article
+              - listitem [ref=f3e211]:
+                - button "Research Report on Noise-Shaped One-Bit Coefficients in Discrete Polynomial Fourier Extension arxiv-cs-cl article" [ref=f3e212]:
+                  - generic [ref=f3e213]: "18"
+                  - generic [ref=f3e214]:
+                    - generic [ref=f3e215]: Research Report on Noise-Shaped One-Bit Coefficients in Discrete Polynomial Fourier Extension
+                    - generic [ref=f3e217]:
+                      - generic [ref=f3e218]: arxiv-cs-cl
+                      - generic [ref=f3e219]: article
+              - listitem [ref=f3e220]:
+                - 'button "Show HN: Formally verified 3D CSG: Trust 93 lines spec, not 1000 lines AI code hn-ai article" [ref=f3e221]':
+                  - generic [ref=f3e222]: "19"
+                  - generic [ref=f3e223]:
+                    - generic [ref=f3e224]: "Show HN: Formally verified 3D CSG: Trust 93 lines spec, not 1000 lines AI code"
+                    - generic [ref=f3e226]:
+                      - generic [ref=f3e227]: hn-ai
+                      - generic [ref=f3e228]: article
+              - listitem [ref=f3e229]:
+                - button "Tensor is the might lobsters-ai article" [ref=f3e230]:
+                  - generic [ref=f3e231]: "20"
+                  - generic [ref=f3e232]:
+                    - generic [ref=f3e233]: Tensor is the might
+                    - generic [ref=f3e235]:
+                      - generic [ref=f3e236]: lobsters-ai
+                      - generic [ref=f3e237]: article
+              - listitem [ref=f3e238]:
+                - 'button "The New AI Superpowers: Focus and Followthrough hn-ai article" [ref=f3e239]':
+                  - generic [ref=f3e240]: "21"
+                  - generic [ref=f3e241]:
+                    - generic [ref=f3e242]: "The New AI Superpowers: Focus and Followthrough"
+                    - generic [ref=f3e244]:
+                      - generic [ref=f3e245]: hn-ai
+                      - generic [ref=f3e246]: article
+              - listitem [ref=f3e247]:
+                - 'button "TimeCapsule: Generative Hallucination as a Method for Historical Sensemaking arxiv-cs-cl article" [ref=f3e248]':
+                  - generic [ref=f3e249]: "22"
+                  - generic [ref=f3e250]:
+                    - generic [ref=f3e251]: "TimeCapsule: Generative Hallucination as a Method for Historical Sensemaking"
+                    - generic [ref=f3e253]:
+                      - generic [ref=f3e254]: arxiv-cs-cl
+                      - generic [ref=f3e255]: article
+              - listitem [ref=f3e256]:
+                - button "What is happening to jobs? Separating AI hype from reality hn-ai article" [ref=f3e257]:
+                  - generic [ref=f3e258]: "23"
+                  - generic [ref=f3e259]:
+                    - generic [ref=f3e260]: What is happening to jobs? Separating AI hype from reality
+                    - generic [ref=f3e262]:
+                      - generic [ref=f3e263]: hn-ai
+                      - generic [ref=f3e264]: article
+            - generic [ref=f3e265]:
+              - generic [ref=f3e266]:
+                - generic [ref=f3e267]: "0"
+                - generic [ref=f3e268]: kept
+              - generic [ref=f3e269]:
+                - generic [ref=f3e270]: "0"
+                - generic [ref=f3e271]: dropped
+              - generic [ref=f3e272]:
+                - generic [ref=f3e273]: "0"
+                - generic [ref=f3e274]: skipped
+          - region "Selected item" [ref=f3e275]:
+            - generic [ref=f3e277]:
+              - generic [ref=f3e278]:
+                - generic [ref=f3e279]: queued from hn-ai
+                - heading "Document-borne AI worms can self-propagate through Copilot for Word" [level=2] [ref=f3e280]
+                - generic [ref=f3e281]:
+                  - generic [ref=f3e282]: hn-ai
+                  - generic [ref=f3e283]: ·
+                  - generic [ref=f3e284]: article
+                  - generic [ref=f3e285]: ·
+                  - link "https://enklypesalt.com/posts/context-collapse-part3-ai-worming-through-word/" [ref=f3e286] [cursor=pointer]:
+                    - /url: https://enklypesalt.com/posts/context-collapse-part3-ai-worming-through-word/
+              - generic [ref=f3e292]:
+                - generic [ref=f3e293]:
+                  - generic [ref=f3e294]: Recap
+                  - tablist "Detail view" [ref=f3e295]:
+                    - tab "recap" [selected] [ref=f3e296]
+                    - tab "graphg" [ref=f3e297]
+                - generic [ref=f3e299]:
+                  - paragraph [ref=f3e300]: Context Collapse, Part 3 - AI Worming through Word
+                  - paragraph [ref=f3e301]: I would like to thank Microsoft product teams and Microsoft Security Response Center (MSRC) for collaborating with me on this technical analysis and mitigation of the disclosed vulnerabilities. The editorial opinions reflected below are solely the author’s and do not necessarily reflect those of the organizations I collaborated with.
+                  - heading "Summary" [level=4] [ref=f3e302]
+                  - paragraph [ref=f3e303]: The findings described in this post are part of a coordinated disclosure with MSRC and Microsoft product teams. Microsoft was provided with reproduction steps, videos, environmental assumptions, and the exact proof-of-concept (PoC) prompts used during testing. They were also informed of a 90-day coordination period before disclosure. This was extended two times, resulting a 144-day coordination period.
+                  - paragraph [ref=f3e304]: In parts 1 and 2 in this series, I have shown how external inputs could influence Copilot responses and, in some cases, potentially lead to confidentiality impacts through Cross-Domain Prompt Injection Attacks (XPIAs). This report builds on those findings and extends the XPIA analysis from single-interaction compromise to propagation across trusted document workflows. It shows that attacker-controlled instructions in one document can be copied into Copilot-generated or Copilot-edited Word documents, causing those downstream documents to become new carriers of the same attack.
+                  - paragraph [ref=f3e305]: Previous examples of AI-worms exist. Notably, Morris II demonstrated self-replicating prompt propagation in GenAI-powered email-assistant ecosystems. However, to my knowledge, this is among the first public demonstrations of document-borne AI-worm self-propagation through normal workflows in a mainstream commercial productivity suite.
+                  - paragraph [ref=f3e306]: "The reported scenario is:"
+                  - list [ref=f3e307]:
+                    - listitem [ref=f3e308]: Malicious instructions hidden in an externally shared document could make Copilot alter drafted or edited documents in Word and propagate the attack to new documents.
+                  - heading "The full attack in brief" [level=4] [ref=f3e309]
+                  - heading "The attack" [level=5] [ref=f3e310]
+                  - paragraph [ref=f3e311]: An attacker places hidden instructions in a document that is later used as source material in Copilot for Word. Copilot may interpret those instructions as part of the user’s request, causing it to manipulate the document being drafted or edited. Copilot may then also copy the hidden instructions into the resulting document, turning that document into a new carrier. If the carrier is subsequently used in another Copilot-assisted workflow, the instructions can trigger again and propagate into further documents, even without the attacker’s original document being present.
+                  - heading "Example" [level=5] [ref=f3e312]
+                  - paragraph [ref=f3e313]: Consider an employee preparing a financial report. The employee downloads a market analysis from a trusted website that has been compromised, unaware that the document contains hidden instructions. The employee then includes the analysis as source material when drafting the report with Copilot. The hidden instructions cause Copilot to alter internal figures in the financial report and copy the attack into the new document. The employee saves and shares the apparently legitimate report internally. Later, a colleague uses it as source material for another report; the instructions trigger again, alter the new report, and copy themselves forward. The attack can therefore continue without further involvement from either the compromised website or the original malicious document. As affected reports are reused, additional reports and documents can become carriers of the attack.
+                  - heading "Disclosure status at publication" [level=4] [ref=f3e314]
+                  - list [ref=f3e315]:
+                    - listitem [ref=f3e316]: "Vendor: Microsoft"
+                    - listitem [ref=f3e317]: "Coordinated disclosure: Handled through MSRC and Microsoft product teams"
+                    - listitem [ref=f3e318]: "Included in this post: XPIA and self-propagation scenario in Microsoft Copilot for Word"
+                    - listitem [ref=f3e319]: "Customer action: No customer-side remediation fully addresses the issue at the time of publication. Customers can reduce exposure by:"
+                    - listitem [ref=f3e320]: Treating externally sourced documents as untrusted when used with Copilot.
+                    - listitem [ref=f3e321]: Reviewing any attached document before starting a Copilot generation or edit.
+                    - listitem [ref=f3e322]: Carefully reviewing Copilot-generated or Copilot-edited documents before reusing, sharing, or distributing them.
+                    - listitem [ref=f3e323]: "Microsoft-side status: Testing has reproduced the attack with all current mitigations deployed. At the time of publication, no robust mitigation for the broader vulnerability class is available."
+                  - heading "A note on disclosing before a fix" [level=4] [ref=f3e324]
+                  - paragraph [ref=f3e325]: Unlike Parts 1 and 2, this scenario remains exploitable at publication. I have weighed that carefully. The coordination period agreed with Microsoft has been exhausted, and testing shows that no robust mitigation for the broader vulnerability class is currently available. Two mitigation attempts, including a model upgrade, did not close the class.
+                  - paragraph [ref=f3e326]: I have therefore chosen to disclose at the class level rather than the payload level. My reasoning is that defenders cannot reduce exposure to a risk they are unaware of, and the propagation mechanism described here affects ordinary document workflows that many organizations already rely on. Withholding the existence of the issue would leave those organizations unable to make an informed decision, while providing no additional protection.
+                  - heading "Disclosure timeline" [level=4] [ref=f3e327]
+                  - list [ref=f3e328]:
+                    - listitem [ref=f3e329]: "2026-03-06: Initial report submitted to MSRC with reproduction steps, videos, environmental assumptions, and PoC prompts."
+                    - listitem [ref=f3e330]: "2026-03-09: MSRC acknowledged receipt and opened a case."
+                    - listitem [ref=f3e331]: "2026-03-31: Microsoft confirms the reported behavior."
+                    - listitem [ref=f3e332]: "2026-03-31: Microsoft product teams began mitigation work; ongoing technical discussion."
+                    - listitem [ref=f3e333]: "2026-04-03: First mitigation go-live (The new “Edit with Copilot” experience)"
+                    - listitem [ref=f3e334]: "2026-04-09: Original attack prompt wording verified mitigated with “Edit with Copilot”."
+                    - listitem [ref=f3e335]: "2026-04-09: Attack behavior reproduced in “Edit with Copilot” using a new XPIA prompt task (manipulating financials). Reported as separate case to MSRC."
+                    - listitem [ref=f3e336]: "2026-04-10: MSRC acknowledged receipt and opened a case."
+                    - listitem [ref=f3e337]: "2026-04-10: Microsoft product teams began mitigation work; ongoing technical discussion."
+                    - listitem [ref=f3e338]: "2026-06-08: At Microsoft’s request, public disclosure was moved to 2026-07-15."
+                    - listitem [ref=f3e339]: "2026-07-14: Second mitigation fix go-live. This mitigation consisted of upgrading the underlying model to GPT-5.5."
+                    - listitem [ref=f3e340]: "2026-07-15: Successful exploit with worming reproduced using GPT-5.6, the latest available model at the time."
+                    - listitem [ref=f3e341]: "2026-07-15: I suggest we postpone disclosure a further two weeks to 2026-07-28, to allow time for a new mitigation."
+                    - listitem [ref=f3e342]: "2026-07-15: Microsoft agreed."
+                    - listitem [ref=f3e343]: "2026-07-28: Attack still reproduces."
+                    - listitem [ref=f3e344]: "2026-07-28: Coordinated public disclosure (this post)."
+                  - heading "Threat model" [level=4] [ref=f3e345]
+                  - paragraph [ref=f3e346]: The attacker does not need access to the victim’s Microsoft 365 tenant. The attacker only needs to share a malicious document with the victim. This can be done through SharePoint, Teams, Outlook or any other way of sharing documents.
+                  - heading "Security boundary and observed behavior" [level=4] [ref=f3e347]
+                  - paragraph [ref=f3e348]: The relevant security boundary in this scenario is the boundary between attached documents and the current drafting document. If any of the attached documents contain an XPIA the attack may trigger.
+                  - paragraph [ref=f3e349]: Copilot must read every attached document to determine which parts to include in its current drafting task. However, attached documents should be treated as untrusted information, not trusted user instruction.
+                  - paragraph [ref=f3e350]: Boundary violation
+                  - paragraph [ref=f3e351]: Attacker-controlled documents are downloaded or shared through email/sharepoint/other sharing option. If such documents are attached to Copilot during a drafting task, trust is broken.
+                  - paragraph [ref=f3e352]: Expected behavior
+                  - paragraph [ref=f3e353]: When a user asks Copilot to draft e.g. a Q1 financial report based on attached documents, Copilot should utilize the information in the attached documents without treating instructions embedded within documents as authoritative instructions.
+                  - paragraph [ref=f3e354]: Observed behavior
+                  - paragraph [ref=f3e355]: "Instructions embedded in documents cause Copilot to alter its behavior. Here presented as:"
+                  - paragraph [ref=f3e356]: "1: Copilot silently changing numerical values in financial reports"
+                  - paragraph [ref=f3e357]: "2: Copilot propagating the full XPIA by pasting into downstream documents, which may then be used as attachments in later drafting sessions\\"
+                  - heading "Crossing the trust boundary in Word" [level=4] [ref=f3e358]
+                  - paragraph [ref=f3e359]: The initial attack vector for these scenarios uses a malicious document. The malicious document contains a JSON-formatted malicious prompt that triggers the attack when the document is included in Copilot’s context. The prompt can be rendered as white text on a white background and in a small font size to conceal it from the victim. Since Copilot for Word strips all text formatting like color and font size before passing the text into the underlying Large Language Model (LLM), this text remains fully readable to Copilot even though the victim cannot see it. The attack can be further concealed by embedding it in a seemingly benign document with task-relevant text.
+                  - paragraph [ref=f3e360]: "This attack requires the malicious document to be included as part of Copilot’s context in Word. Thus, depending on the version of Copilot in use, the victim must either:"
+                  - list [ref=f3e361]:
+                    - listitem [ref=f3e362]: Actively attach or upload the document in Copilot for Word.
+                    - listitem [ref=f3e363]: Use the “Edit with Copilot” functionality in work/Work IQ mode and let Copilot find the malicious document in the victim’s OneDrive. In this case, Copilot must deem the document relevant and include it in the context. An attacker therefore needs to craft a document that increases the likelihood of either or both.
+                  - paragraph [ref=f3e364]: The exploit is relevant both for the “magic pen” and the “Edit with Copilot” functionalities in Word.
+                  - paragraph [ref=f3e365]: The attack happens in two stages. The first stage establishes foothold and in the second stage the attack self-propagates across documents that use Copilot for Word as part of drafting or editing.
+                  - heading "Stage 1:" [level=5] [ref=f3e366]
+                  - paragraph [ref=f3e367]: In the first stage the attacker has crafted a document that contains a malicious hidden prompt. In my initial PoC I used a document that only contained the malicious prompt as white text on white background. This was done to illustrate that the malicious document did not need to be relevant to the victim’s task for Copilot to use it. If it was included in the context, it is read and therefore the attack may trigger.
+                  - paragraph [ref=f3e368]:
+                    - emphasis [ref=f3e369]: "The PoC prompt was structured in two parts:"
+                  - paragraph [ref=f3e370]: The first part contained the instructions on how to affect a document. This could range from slightly changing meanings of summaries to altering numbers in financial documents. The key was formulating the prompt in a way that made Copilot believe it was task-relevant and benign. In many of my experiments I actually needed to also instruct Copilot to highlight which changes it made, since they were often meaningful changes that were difficult to spot. This shows how effective the attack is at subtly changing the text in meaningful ways that easily elude even an attentive reviewer. In a real-world setting, the attacker would obviously not include such instructions. For the rest of this disclosure, therefore, I’ll use altering numbers in financial reports since that is an immediately visible change.
+                  - paragraph [ref=f3e371]: The second part contained the instructions to self-propagate the attack. The exact wording also matters here, but it was generally framed as serving the purpose of tracking sources in downstream documents. It also contained instructions on how to hide itself, framed as instructions to improve readability.
+                  - paragraph [ref=f3e372]:
+                    - emphasis [ref=f3e373]: "Figure 1: The initial attack vector document. I created a full mock company named Tfosorcim Ltd. for this PoC, with mock economics and vision. This attack vector document is a fake market analysis made using information about the company that would typically be available to an attacker. The attack is appended at the end of the document using white text. [Most of the XPIA text is blurred for security]"
+                  - paragraph [ref=f3e374]: Once this malicious document was included in the context when drafting or editing a document with Copilot for Word, the attack would trigger and Copilot would execute the instructions. Thus, the affected document would have financial numbers changed. Copilot would then also copy the entire malicious prompt into the bottom of the affected document using white text and font size 8, effectively concealing it from the victim.
+                  - paragraph [ref=f3e375]:
+                    - emphasis [ref=f3e376]: "Figure 2: The downstream draft generated by Copilot used my malicious document as an attachment ([att] Direct wmr.docx). In the resulting Q1 financial report draft, all financial numbers are halved. The screenshot also shows other attached documents (Tfosorcim internal documents)."
+                  - paragraph [ref=f3e377]:
+                    - emphasis [ref=f3e378]: "Figure 3: The figure demonstrates that GPT-5.6, the latest model from OpenAI at the time of writing, was used in these PoCs."
+                  - paragraph [ref=f3e379]:
+                    - emphasis [ref=f3e380]: "Figure 4: After having halved all financial numbers in the Q1 financial report draft, Copilot also appends the full attack prompt using white text to effectively conceal it from the victim. It also makes no mention about its halving of numbers or that it includes the attack. Thus, the victim is clueless of it. [Most of the XPIA text is blurred for security]"
+                  - paragraph [ref=f3e381]:
+                    - emphasis [ref=f3e382]: "Figure 5: Copilot does not require the victim to attach the malicious document though. In this screenshot the victim only instructs Copilot to write a Tfosorcim Q1 financial report. Copilot then searches through the victim’s OneDrive to find relevant documents. Among the documents, we find the malicious Market Analysis document. This document does not reside in the same folder as the rest of the Tfosorcim document. However, Copilot still finds it, reads it and is successfully exploited."
+                  - heading "Stage 2:" [level=5] [ref=f3e383]
+                  - paragraph [ref=f3e384]: Stage two is the self-propagation stage. It relies entirely on the instruction for Copilot to copy the malicious prompt into the affected document. Once the affected document contained the prompt, the new document itself became the new attack vector.
+                  - paragraph [ref=f3e385]:
+                    - emphasis [ref=f3e386]: "Figure 6: The screenshot shows a new drafting session using Copilot. This time the original attack vector is no longer included among the attachments. However, the previously created document is (Tfosorcim Q1 2026 report.docx). The result is the same, and Copilot again halves all financial numbers in the drafted Q2 financial report."
+                  - paragraph [ref=f3e387]:
+                    - emphasis [ref=f3e388]: "Figure 7: In addition to halving all financial numbers, Copilot adds the full attack prompt, again using white text. Thus, the attack propagates through Word documents, effectively creating a document-borne AI worm. [Most of the XPIA text is blurred for security]."
+                  - paragraph [ref=f3e389]: Of note, this new attack vector is now an internally created document, with all the trust that follows. Thus, the victim needs only share this document with coworkers for the attack to spread. If the victim or a colleague then uses the affected document as an attachment to Copilot for Word while drafting or editing, the attack spreads to these new documents.
+                  - paragraph [ref=f3e390]: In all reported PoC scenarios, Copilot would alter generated or edited documents and copy the hidden instruction into these documents. When these documents were themselves used as part of the context for new downstream documents, the attack triggered again. Note that for the second phase, the original attack document was no longer part of the attachments for the new downstream documents, yet the attack triggered and spread to these as well.
+                  - heading "Impact" [level=5] [ref=f3e391]
+                  - paragraph [ref=f3e392]: Since the attack is able to spread through internal documents, once it has moved beyond its initial point of entry, the traceability of the attack becomes extremely difficult. This is further exacerbated by each document being created by a legitimate internal resource and that Copilot edits are not made visible after they have been approved by the victim. The broader concern is that, if the attack silently spread within an organization through ordinary document workflows, it could erode the informational foundation on which organizations make decisions.
+                  - paragraph [ref=f3e393]: In addition, organizations that are not aware that they are affected by the attack are also likely to spread it to other organizations through collaborative efforts on shared Microsoft SharePoint sites or shared Microsoft Teams. Thus, the initial attack vector for a particular organization may actually come from an already affected trusted partner. This again increases likelihood of the victim choosing to include the affected document in the Copilot for Word context during drafting.
+                  - paragraph [ref=f3e394]: Recently Copilot is also becoming more deeply integrated with systems such as Microsoft Cowork or Microsoft Scout, which extend the assistant to automatic manipulation and creation of documents, tools, and collaborative workflows. In such systems the practical impact of the issues described here may scale rapidly. The underlying mechanism remains the same, but the potential surface over which it can propagate or influence expands at machine speed.
+                  - heading "Mitigating the vulnerabilities" [level=4] [ref=f3e395]
+                  - paragraph [ref=f3e396]: Microsoft successfully mitigated the originally submitted PoC prompt, and deployed multiple fixes over the course of this disclosure. Each of these raised the bar by closing the specific payloads reported, and reproducing the behavior afterwards required altered payloads rather than reusing the old ones directly.
+                  - paragraph [ref=f3e397]: The original report, however, also described the broader vulnerability class, in which instructions embedded in a source document could influence Copilot’s generation and copy themselves into downstream documents. Changing the requested action or wording changes the payload, but not the underlying vulnerability or propagation mechanism. Using a modified payload, the complete attack chain has been reproduced with all mitigations deployed (the PoC in this report is one such case). The vulnerability class therefore remains exploitable at the time of publication.
+                  - paragraph [ref=f3e398]: That the class is not yet fully closed reflects how hard the underlying problem is. As the closing thoughts discuss, the weakness is architectural and shared across current LLM-based systems. I’m not aware of a complete mitigation for this class in any comparable product today. Fully resolving it requires research rather than a single patch. Within those limits, Microsoft’s fixes meaningfully reduce exposure, and the memory and email-body vectors covered in Parts 1 and 2 were mitigated outright. I would like to thank Microsoft for their continued and substantive effort on a genuinely difficult problem.
+                  - heading "Implications" [level=4] [ref=f3e399]
+                  - paragraph [ref=f3e400]: Taken together with the two previous parts in this series, these findings point to a broader issue in modern work environments. Namely that the integrity of information becomes a primary security concern in systems that integrate LLMs as part of their operating workflows. The scenarios presented show that attacker-controlled content can not only influence individual outputs and potentially leak information. The attacks themselves can also be replicated and self-propagate through normal user workflows.
+                  - paragraph [ref=f3e401]: This introduces challenges that extend well beyond initial exploitation. Once malicious instructions are embedded in generated content, they may persist across documents, be redistributed by legitimate users, and be reintroduced into new contexts. At that point, the attack is no longer dependent on its original entry point. It has instead become part of the system’s internal information flow.
+                  - paragraph [ref=f3e402]: A related implication is the loss of traceability. Since affected content is generated and modified through legitimate workflows, the origin of the manipulation becomes difficult to identify after the fact. This complicates both detection and response, particularly in environments where such content is widely shared.
+                  - paragraph [ref=f3e403]: Independently of prompt-injection prevention, generated documents should preserve provenance for source material and model-performed edits in metadata. Such controls would not prevent the underlying injection, but they could make traceability much easier.
+                  - heading "Closing thoughts" [level=4] [ref=f3e404]
+                  - paragraph [ref=f3e405]: The findings in this series point beyond any single product or implementation. They expose a broader architectural weakness in current LLM-based systems.
+                  - paragraph [ref=f3e406]: For AI-assistants to be useful, they often must process emails, documents, webpages, memories, tool outputs, and other information that may be controlled by an attacker. To process that information, it must be included in the model’s context window, where it participates in the same computation as system instructions, user requests, and other trusted information.
+                  - paragraph [ref=f3e407]: "This creates a fundamental problem: the LLM must process external content to determine what it means, whether it is relevant, and whether it contains an attack. But by the time it makes that determination, the attacker-controlled tokens are already influencing the computation that produces it. The content being inspected participates in the act of inspection. Relying on the model to detect XPIAs therefore resembles asking an interpreter to execute an untrusted program to determine whether that program is safe to execute."
+                  - paragraph [ref=f3e408]: Detecting and removing malicious content before it reaches the target model merely moves the same problem outward.
+                  - paragraph [ref=f3e409]: Because LLMs can recover semantics across radically different representations, an effective detector must possess comparable semantic recovery capabilities. A detector weaker than the target LLM will cover a smaller representational space, leaving malicious formulations that the target understands but the detector fails to recognize.
+                  - paragraph [ref=f3e410]: The only generally available technology with comparable semantic capabilities is another LLM. Placing one model in front of another may reduce the success rate of particular attacks, but it creates an “LLMs all the way down” problem, where every LLM introduced to protect another LLM must itself be protected.
+                  - paragraph [ref=f3e411]: The long-term challenge likely lies in designing systems in which goals and intentions also exist independently of the information being processed. Current LLM architectures provide no reliable separation between intention and interpretation. Thus, in current systems with embedded LLMs, attacker-controlled information can influence not only what the model produces, but what the model believes it has been asked to produce.
+                  - paragraph [ref=f3e412]: For that reason, any system that integrates an LLM into a trusted workflow today must assume that attacker-controlled content entering the model’s context will result in compromise at some rate.
+                  - heading "Change Log" [level=4] [ref=f3e413]
+                  - paragraph [ref=f3e414]: The following is a change log that shows which part of this post have been changed and at what time. Spelling mistakes and similar errors will not be logged. However, I will strive to include any meaningful changes to the post.
+                  - list [ref=f3e415]:
+                    - listitem [ref=f3e416]: "2026-07-28: Change log added"
+                  - paragraph [ref=f3e417]: Coordinated Vulnerability Disclosures
+                  - paragraph [ref=f3e418]: ml llm cvd vulnerability
+                  - paragraph [ref=f3e419]: This post is licensed under CC BY 4.0 by the author.
+                  - paragraph [ref=f3e420]: Share
+                  - heading "Trending Tags" [level=4] [ref=f3e421]
+                  - paragraph [ref=f3e422]: llm ml prediksjon statistikk cvd lineær regresjon vulnerability agenter attention autoregressive språkmodeller
+                - button "Collapse" [active] [ref=f3e460] [cursor=pointer]
+                - generic [ref=f3e427]:
+                  - generic [ref=f3e428]: news
+                  - generic [ref=f3e429]: ai
+                - generic [ref=f3e430]:
+                  - generic [ref=f3e431]: queued 10m ago
+                  - generic [ref=f3e432]: 3,381 words
+                  - generic [ref=f3e433]: ~5k
+            - generic [ref=f3e435]:
+              - button "Keep k" [ref=f3e436] [cursor=pointer]:
+                - text: Keep
+                - generic [ref=f3e439]: k
+              - button "Drop d" [ref=f3e440] [cursor=pointer]:
+                - text: Drop
+                - generic [ref=f3e444]: d
+              - button "Skip" [ref=f3e445] [cursor=pointer]
+              - button "Open o" [ref=f3e449] [cursor=pointer]:
+                - text: Open
+                - generic [ref=f3e454]: o
+              - button "Undo u" [disabled] [ref=f3e455]:
+                - text: Undo
+                - generic [ref=f3e459]: u
+  - region "Notifications alt+T"

@@ -1,0 +1,120 @@
+- generic [ref=f11e2]:
+  - generic [ref=f11e3]:
+    - link "Skip to content" [ref=f11e4] [cursor=pointer]:
+      - /url: "#main"
+    - navigation "Sections" [ref=f11e5]:
+      - link "Second Brain — home" [ref=f11e6] [cursor=pointer]:
+        - /url: /feed/review
+      - link "Queue" [ref=f11e12] [cursor=pointer]:
+        - /url: /feed/review
+      - link "Feeds" [ref=f11e18] [cursor=pointer]:
+        - /url: /feed/stats
+      - link "Wiki" [ref=f11e25] [cursor=pointer]:
+        - /url: /wiki
+      - link "Settings" [ref=f11e30] [cursor=pointer]:
+        - /url: /feed/settings
+    - generic [ref=f11e34]:
+      - banner [ref=f11e35]:
+        - generic [ref=f11e36]:
+          - heading "Settings" [level=1] [ref=f11e37]
+          - generic [ref=f11e38]: feeds.toml · .brain/config.json · .brain/gui-prefs.json
+      - main [ref=f11e39]:
+        - generic [ref=f11e40]:
+          - generic [ref=f11e41]:
+            - heading "Feeder" [level=2] [ref=f11e42]
+            - paragraph [ref=f11e43]: The global daily cap bounds how many items each feed may deposit per day.
+            - generic [ref=f11e44]:
+              - generic [ref=f11e45]: Global daily cap
+              - textbox "Global daily cap" [ref=f11e46]: "5"
+            - generic [ref=f11e47]:
+              - status
+              - button "Save cap" [ref=f11e48] [cursor=pointer]
+          - generic [ref=f11e49]:
+            - heading "Claude model" [level=2] [ref=f11e50]
+            - paragraph [ref=f11e51]: Model for unattended sync / digest / capture agents (bin/brain-run.sh).
+            - generic [ref=f11e52]:
+              - generic [ref=f11e53]: Model
+              - textbox "Model" [ref=f11e54]:
+                - /placeholder: sonnet · opus · haiku — empty = default
+            - generic [ref=f11e55]:
+              - status
+              - button "Save model" [ref=f11e56] [cursor=pointer]
+          - generic [ref=f11e57]:
+            - heading "Appearance" [level=2] [ref=f11e58]
+            - paragraph [ref=f11e59]: Applies immediately and is saved for the next launch.
+            - generic [ref=f11e60]:
+              - group "Accent" [ref=f11e61]:
+                - generic [ref=f11e63]:
+                  - button "amber" [ref=f11e64]
+                  - button "indigo" [pressed] [ref=f11e66]
+                  - button "emerald" [ref=f11e68]
+                  - button "mono" [ref=f11e70]
+              - group "Density" [ref=f11e72]:
+                - generic [ref=f11e74]:
+                  - button "comfortable" [pressed] [ref=f11e75]
+                  - button "compact" [ref=f11e76]
+              - group "Intensity" [ref=f11e77]:
+                - generic [ref=f11e79]:
+                  - button "calm" [ref=f11e80]
+                  - button "vivid" [pressed] [ref=f11e81]
+          - generic [ref=f11e82]:
+            - heading "Shortcuts" [level=2] [ref=f11e83]
+            - paragraph [ref=f11e84]: Global — inert while typing in a form field.
+            - generic [ref=f11e85]:
+              - generic [ref=f11e86]:
+                - term [ref=f11e87]:
+                  - generic [ref=f11e88]: k / ⏎
+                - definition [ref=f11e89]: keep — place the item into sources/
+              - generic [ref=f11e90]:
+                - term [ref=f11e91]:
+                  - generic [ref=f11e92]: d
+                - definition [ref=f11e93]: drop the queued candidate
+              - generic [ref=f11e94]:
+                - term [ref=f11e95]:
+                  - generic [ref=f11e96]: →
+                - definition [ref=f11e97]: skip — leave it queued, advance
+              - generic [ref=f11e98]:
+                - term [ref=f11e99]:
+                  - generic [ref=f11e100]: o
+                - definition [ref=f11e101]: open the source url
+              - generic [ref=f11e102]:
+                - term [ref=f11e103]:
+                  - generic [ref=f11e104]: u
+                - definition [ref=f11e105]: undo the last keep / drop
+              - generic [ref=f11e106]:
+                - term [ref=f11e107]:
+                  - generic [ref=f11e108]: ⇧r
+                - definition [ref=f11e109]: rescan the queue from disk
+              - generic [ref=f11e110]:
+                - term [ref=f11e111]:
+                  - generic [ref=f11e112]: g
+                - definition [ref=f11e113]: toggle recap / outline
+              - generic [ref=f11e114]:
+                - term [ref=f11e115]:
+                  - generic [ref=f11e116]: ↓
+                - definition [ref=f11e117]: select the next queued item
+              - generic [ref=f11e118]:
+                - term [ref=f11e119]:
+                  - generic [ref=f11e120]: ↑
+                - definition [ref=f11e121]: select the previous queued item
+              - generic [ref=f11e122]:
+                - term [ref=f11e123]:
+                  - generic [ref=f11e124]: r
+                - definition [ref=f11e125]: go to Review Queue
+              - generic [ref=f11e126]:
+                - term [ref=f11e127]:
+                  - generic [ref=f11e128]: f
+                - definition [ref=f11e129]: go to Feed Stats
+              - generic [ref=f11e130]:
+                - term [ref=f11e131]:
+                  - generic [ref=f11e132]: w
+                - definition [ref=f11e133]: go to the Wiki
+              - generic [ref=f11e134]:
+                - term [ref=f11e135]:
+                  - generic [ref=f11e136]: s
+                - definition [ref=f11e137]: go to Settings
+              - generic [ref=f11e138]:
+                - term [ref=f11e139]:
+                  - generic [ref=f11e140]: t
+                - definition [ref=f11e141]: toggle review ↔ stats
+  - region "Notifications alt+T"

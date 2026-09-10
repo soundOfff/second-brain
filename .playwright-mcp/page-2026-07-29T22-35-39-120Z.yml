@@ -1,0 +1,166 @@
+- generic [ref=f10e2]:
+  - generic [ref=f10e3]:
+    - link "Skip to content" [ref=f10e4] [cursor=pointer]:
+      - /url: "#main"
+    - generic [ref=f10e5]:
+      - banner [ref=f10e6]:
+        - button "Open navigation" [ref=f10e7] [cursor=pointer]
+        - generic [ref=f10e9]:
+          - heading "Feed Stats" [level=1] [ref=f10e10]
+          - generic [ref=f10e11]: feeds.toml · keep-rate tracked going forward
+        - button "Run" [ref=f10e13] [cursor=pointer]
+      - main [ref=f10e17]:
+        - generic [ref=f10e18]:
+          - status [ref=f10e19]: pulls every feed once — same as the 01:30 agent
+          - generic [ref=f10e20]:
+            - generic [ref=f10e21]:
+              - generic [ref=f10e22]: "5"
+              - generic [ref=f10e23]: feeds
+            - generic [ref=f10e24]:
+              - generic [ref=f10e25]: "32"
+              - generic [ref=f10e26]: queued
+            - generic [ref=f10e27]:
+              - generic [ref=f10e28]: "0"
+              - generic [ref=f10e29]: seen today
+          - generic [ref=f10e30]: Per feed
+          - generic [ref=f10e31]:
+            - generic [ref=f10e32]:
+              - generic [ref=f10e33]:
+                - generic [ref=f10e34]: lobsters-ai
+                - generic [ref=f10e35]: 100%
+              - generic [ref=f10e36]:
+                - generic [ref=f10e37]:
+                  - term [ref=f10e38]: adapter
+                  - definition [ref=f10e39]: rss
+                - generic [ref=f10e40]:
+                  - term [ref=f10e41]: trust
+                  - definition [ref=f10e42]: queue
+                - generic [ref=f10e43]:
+                  - term [ref=f10e44]: cap
+                  - definition [ref=f10e45]: "8"
+                - generic [ref=f10e46]:
+                  - term [ref=f10e47]: seen
+                  - definition [ref=f10e48]: "37"
+                - generic [ref=f10e49]:
+                  - term [ref=f10e50]: today
+                  - definition [ref=f10e51]: "0"
+                - generic [ref=f10e52]:
+                  - term [ref=f10e53]: queued
+                  - definition [ref=f10e54]: "13"
+            - generic [ref=f10e55]:
+              - generic [ref=f10e56]:
+                - generic [ref=f10e57]: hn-ai
+                - generic [ref=f10e58]: 78%
+              - generic [ref=f10e59]:
+                - generic [ref=f10e60]:
+                  - term [ref=f10e61]: adapter
+                  - definition [ref=f10e62]: rss
+                - generic [ref=f10e63]:
+                  - term [ref=f10e64]: trust
+                  - definition [ref=f10e65]: queue
+                - generic [ref=f10e66]:
+                  - term [ref=f10e67]: cap
+                  - definition [ref=f10e68]: "10"
+                - generic [ref=f10e69]:
+                  - term [ref=f10e70]: seen
+                  - definition [ref=f10e71]: "47"
+                - generic [ref=f10e72]:
+                  - term [ref=f10e73]: today
+                  - definition [ref=f10e74]: "0"
+                - generic [ref=f10e75]:
+                  - term [ref=f10e76]: queued
+                  - definition [ref=f10e77]: "19"
+            - generic [ref=f10e78]:
+              - generic [ref=f10e79]:
+                - generic [ref=f10e80]: arxiv-cs-cl
+                - generic [ref=f10e81]: 69%
+              - generic [ref=f10e82]:
+                - generic [ref=f10e83]:
+                  - term [ref=f10e84]: adapter
+                  - definition [ref=f10e85]: rss
+                - generic [ref=f10e86]:
+                  - term [ref=f10e87]: trust
+                  - definition [ref=f10e88]: queue
+                - generic [ref=f10e89]:
+                  - term [ref=f10e90]: cap
+                  - definition [ref=f10e91]: "5"
+                - generic [ref=f10e92]:
+                  - term [ref=f10e93]: seen
+                  - definition [ref=f10e94]: "11"
+                - generic [ref=f10e95]:
+                  - term [ref=f10e96]: today
+                  - definition [ref=f10e97]: "0"
+                - generic [ref=f10e98]:
+                  - term [ref=f10e99]: queued
+                  - definition [ref=f10e100]: "0"
+            - generic [ref=f10e101]:
+              - generic [ref=f10e102]:
+                - generic [ref=f10e103]: andrej-karpathy
+                - generic [ref=f10e104]: N/A
+              - generic [ref=f10e105]:
+                - generic [ref=f10e106]:
+                  - term [ref=f10e107]: adapter
+                  - definition [ref=f10e108]: rss
+                - generic [ref=f10e109]:
+                  - term [ref=f10e110]: trust
+                  - definition [ref=f10e111]: auto
+                - generic [ref=f10e112]:
+                  - term [ref=f10e113]: cap
+                  - definition [ref=f10e114]: "2"
+                - generic [ref=f10e115]:
+                  - term [ref=f10e116]: seen
+                  - definition [ref=f10e117]: "10"
+                - generic [ref=f10e118]:
+                  - term [ref=f10e119]: today
+                  - definition [ref=f10e120]: "0"
+                - generic [ref=f10e121]:
+                  - term [ref=f10e122]: queued
+                  - definition [ref=f10e123]: "0"
+            - generic [ref=f10e124]:
+              - generic [ref=f10e125]:
+                - generic [ref=f10e126]: simon-willison
+                - generic [ref=f10e127]: N/A
+              - generic [ref=f10e128]:
+                - generic [ref=f10e129]:
+                  - term [ref=f10e130]: adapter
+                  - definition [ref=f10e131]: rss
+                - generic [ref=f10e132]:
+                  - term [ref=f10e133]: trust
+                  - definition [ref=f10e134]: auto
+                - generic [ref=f10e135]:
+                  - term [ref=f10e136]: cap
+                  - definition [ref=f10e137]: "3"
+                - generic [ref=f10e138]:
+                  - term [ref=f10e139]: seen
+                  - definition [ref=f10e140]: "15"
+                - generic [ref=f10e141]:
+                  - term [ref=f10e142]: today
+                  - definition [ref=f10e143]: "0"
+                - generic [ref=f10e144]:
+                  - term [ref=f10e145]: queued
+                  - definition [ref=f10e146]: "0"
+          - paragraph [ref=f10e147]: "Why N/AKeep-rate is tracked going forward: a feed needs at least 10 keep/drop decisions before a number is shown."
+          - button "Add source" [ref=f10e149] [cursor=pointer]
+    - generic:
+      - button
+      - navigation:
+        - generic:
+          - generic: Second Brain
+          - button
+        - link:
+          - /url: /feed/review
+          - generic: Review Queue
+          - generic: r
+        - link:
+          - /url: /feed/stats
+          - generic: Feed Stats
+          - generic: f
+        - link:
+          - /url: /wiki
+          - generic: Wiki
+          - generic: w
+        - link:
+          - /url: /feed/settings
+          - generic: Settings
+          - generic: s
+  - region "Notifications alt+T"

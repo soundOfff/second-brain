@@ -1,0 +1,30 @@
+- generic [ref=f3e2]:
+  - generic [ref=f3e3]:
+    - link "Skip to content" [ref=f3e4] [cursor=pointer]:
+      - /url: "#main"
+    - navigation "Sections" [ref=f3e5]:
+      - link "Second Brain — home" [ref=f3e6] [cursor=pointer]:
+        - /url: /feed/review
+      - link "Queue" [ref=f3e12] [cursor=pointer]:
+        - /url: /feed/review
+      - link "Feeds" [ref=f3e18] [cursor=pointer]:
+        - /url: /feed/stats
+      - link "Wiki" [ref=f3e25] [cursor=pointer]:
+        - /url: /wiki
+      - link "Settings" [ref=f3e30] [cursor=pointer]:
+        - /url: /feed/settings
+    - generic [ref=f3e34]:
+      - banner [ref=f3e35]:
+        - generic [ref=f3e36]:
+          - heading "agentic-engineering" [level=1] [ref=f3e37]
+          - generic [ref=f3e38]: concepts/agentic-engineering
+      - main [ref=f3e39]:
+        - generic [ref=f3e40]:
+          - complementary "Wiki pages" [ref=f3e41]:
+            - searchbox "Filter wiki pages" [ref=f3e44]
+            - navigation "Wiki pages" [ref=f3e45]:
+              - link "Map of content" [ref=f3e46] [cursor=pointer]:
+                - /url: /wiki
+              - paragraph [ref=f3e47]: No pages match “”.
+          - generic [ref=f3e48]: Loading…
+  - region "Notifications alt+T"

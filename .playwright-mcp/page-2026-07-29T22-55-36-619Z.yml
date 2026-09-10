@@ -1,0 +1,26 @@
+- generic [ref=f2e2]:
+  - generic [ref=f2e3]:
+    - link "Skip to content" [ref=f2e4] [cursor=pointer]:
+      - /url: "#main"
+    - navigation "Sections" [ref=f2e5]:
+      - link "Second Brain — home" [ref=f2e6] [cursor=pointer]:
+        - /url: /feed/review
+      - link "Queue" [ref=f2e12] [cursor=pointer]:
+        - /url: /feed/review
+      - link "Feeds" [ref=f2e18] [cursor=pointer]:
+        - /url: /feed/stats
+      - link "Wiki" [ref=f2e25] [cursor=pointer]:
+        - /url: /wiki
+      - link "Settings" [ref=f2e30] [cursor=pointer]:
+        - /url: /feed/settings
+    - generic [ref=f2e34]:
+      - banner [ref=f2e35]:
+        - generic [ref=f2e36]:
+          - heading "Review Queue" [level=1] [ref=f2e37]
+          - generic [ref=f2e38]: live queue · 0 pending
+        - button "Rescan the queue from disk" [ref=f2e40] [cursor=pointer]:
+          - generic [ref=f2e46]: Rescan
+          - generic [ref=f2e47]: ⇧r
+      - main [ref=f2e48]:
+        - generic [ref=f2e49]: Loading queue…
+  - region "Notifications alt+T"

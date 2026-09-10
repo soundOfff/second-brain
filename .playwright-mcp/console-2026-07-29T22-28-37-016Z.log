@@ -1,0 +1,33 @@
+[     117ms] [INFO] %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold @ http://localhost:3001/node_modules/.vite/deps/react-dom_client.js?v=2b4e71a7:20102
+[   39602ms] ReferenceError: useMemo is not defined
+    at WikiMarkdown (http://localhost:3001/src/features/wiki/WikiMarkdown.tsx?t=1785364156485:21:29)
+    at Object.react_stack_bottom_frame (http://localhost:3001/node_modules/.vite/deps/react-dom_client.js?v=2b4e71a7:18509:20)
+    at renderWithHooks (http://localhost:3001/node_modules/.vite/deps/react-dom_client.js?v=2b4e71a7:5654:24)
+    at updateFunctionComponent (http://localhost:3001/node_modules/.vite/deps/react-dom_client.js?v=2b4e71a7:7475:21)
+    at beginWork (http://localhost:3001/node_modules/.vite/deps/react-dom_client.js?v=2b4e71a7:8525:20)
+    at runWithFiberInDEV (http://localhost:3001/node_modules/.vite/deps/react-dom_client.js?v=2b4e71a7:997:72)
+    at performUnitOfWork (http://localhost:3001/node_modules/.vite/deps/react-dom_client.js?v=2b4e71a7:12561:98)
+    at workLoopSync (http://localhost:3001/node_modules/.vite/deps/react-dom_client.js?v=2b4e71a7:12424:43)
+    at renderRootSync (http://localhost:3001/node_modules/.vite/deps/react-dom_client.js?v=2b4e71a7:12408:13)
+    at performWorkOnRoot (http://localhost:3001/node_modules/.vite/deps/react-dom_client.js?v=2b4e71a7:11827:37)
+[   39585ms] [WARNING] %s
+
+%s
+ An error occurred in the <WikiMarkdown> component. Consider adding an error boundary to your tree to customize error handling behavior.
+Visit https://react.dev/link/error-boundaries to learn more about error boundaries. @ http://localhost:3001/node_modules/.vite/deps/react-dom_client.js?v=2b4e71a7:6965
+[   59832ms] ReferenceError: cn is not defined
+    at renderInline (http://localhost:3001/src/features/wiki/WikiMarkdown.tsx?t=1785364176713:359:24)
+    at renderBlock (http://localhost:3001/src/features/wiki/WikiMarkdown.tsx?t=1785364176713:161:85)
+    at http://localhost:3001/src/features/wiki/WikiMarkdown.tsx?t=1785364176713:33:158
+    at Array.map (<anonymous>)
+    at WikiMarkdown (http://localhost:3001/src/features/wiki/WikiMarkdown.tsx?t=1785364176713:33:140)
+    at Object.react_stack_bottom_frame (http://localhost:3001/node_modules/.vite/deps/react-dom_client.js?v=2b4e71a7:18509:20)
+    at renderWithHooks (http://localhost:3001/node_modules/.vite/deps/react-dom_client.js?v=2b4e71a7:5654:24)
+    at updateFunctionComponent (http://localhost:3001/node_modules/.vite/deps/react-dom_client.js?v=2b4e71a7:7475:21)
+    at beginWork (http://localhost:3001/node_modules/.vite/deps/react-dom_client.js?v=2b4e71a7:8525:20)
+    at runWithFiberInDEV (http://localhost:3001/node_modules/.vite/deps/react-dom_client.js?v=2b4e71a7:997:72)
+[   59831ms] [WARNING] %s
+
+%s
+ An error occurred in the <WikiMarkdown> component. Consider adding an error boundary to your tree to customize error handling behavior.
+Visit https://react.dev/link/error-boundaries to learn more about error boundaries. @ http://localhost:3001/node_modules/.vite/deps/react-dom_client.js?v=2b4e71a7:6965

@@ -1,0 +1,17 @@
+[      91ms] [INFO] %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold @ http://localhost:5173/node_modules/.vite/deps/react-dom_client.js?v=2b4e71a7:20102
+[   69358ms] ReferenceError: collectItems is not defined
+    at parseBlocks (http://localhost:5173/src/components/Markdown.tsx?t=1785366387331:155:20)
+    at http://localhost:5173/src/components/Markdown.tsx?t=1785366387331:40:20
+    at updateMemo (http://localhost:5173/node_modules/.vite/deps/react-dom_client.js?v=2b4e71a7:6545:21)
+    at Object.useMemo (http://localhost:5173/node_modules/.vite/deps/react-dom_client.js?v=2b4e71a7:18969:20)
+    at exports.useMemo (http://localhost:5173/node_modules/.vite/deps/chunk-V2WGAXGF.js?v=2b4e71a7:947:36)
+    at Markdown (http://localhost:5173/src/components/Markdown.tsx?t=1785366387331:39:29)
+    at Object.react_stack_bottom_frame (http://localhost:5173/node_modules/.vite/deps/react-dom_client.js?v=2b4e71a7:18509:20)
+    at renderWithHooks (http://localhost:5173/node_modules/.vite/deps/react-dom_client.js?v=2b4e71a7:5654:24)
+    at updateFunctionComponent (http://localhost:5173/node_modules/.vite/deps/react-dom_client.js?v=2b4e71a7:7475:21)
+    at beginWork (http://localhost:5173/node_modules/.vite/deps/react-dom_client.js?v=2b4e71a7:8525:20)
+[   69358ms] [WARNING] %s
+
+%s
+ An error occurred in the <Markdown> component. Consider adding an error boundary to your tree to customize error handling behavior.
+Visit https://react.dev/link/error-boundaries to learn more about error boundaries. @ http://localhost:5173/node_modules/.vite/deps/react-dom_client.js?v=2b4e71a7:6965

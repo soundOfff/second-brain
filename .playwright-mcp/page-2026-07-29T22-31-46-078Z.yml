@@ -1,0 +1,120 @@
+- generic [ref=f5e2]:
+  - generic [ref=f5e3]:
+    - link "Skip to content" [ref=f5e4] [cursor=pointer]:
+      - /url: "#main"
+    - navigation "Sections" [ref=f5e5]:
+      - link "Second Brain — home" [ref=f5e6] [cursor=pointer]:
+        - /url: /feed/review
+      - link "Queue" [ref=f5e12] [cursor=pointer]:
+        - /url: /feed/review
+      - link "Feeds" [ref=f5e18] [cursor=pointer]:
+        - /url: /feed/stats
+      - link "Wiki" [ref=f5e25] [cursor=pointer]:
+        - /url: /wiki
+      - link "Settings" [ref=f5e30] [cursor=pointer]:
+        - /url: /feed/settings
+    - generic [ref=f5e34]:
+      - banner [ref=f5e35]:
+        - generic [ref=f5e36]:
+          - heading "Settings" [level=1] [ref=f5e37]
+          - generic [ref=f5e38]: feeds.toml · .brain/config.json · .brain/gui-prefs.json
+      - main [ref=f5e39]:
+        - generic [ref=f5e40]:
+          - generic [ref=f5e41]:
+            - heading "Feeder" [level=2] [ref=f5e42]
+            - paragraph [ref=f5e43]: The global daily cap bounds how many items each feed may deposit per day.
+            - generic [ref=f5e44]:
+              - generic [ref=f5e45]: Global daily cap
+              - textbox "Global daily cap" [ref=f5e46]: "5"
+            - generic [ref=f5e47]:
+              - status
+              - button "Save cap" [ref=f5e48] [cursor=pointer]
+          - generic [ref=f5e49]:
+            - heading "Claude model" [level=2] [ref=f5e50]
+            - paragraph [ref=f5e51]: Model for unattended sync / digest / capture agents (bin/brain-run.sh).
+            - generic [ref=f5e52]:
+              - generic [ref=f5e53]: Model
+              - textbox "Model" [ref=f5e54]:
+                - /placeholder: sonnet · opus · haiku — empty = default
+            - generic [ref=f5e55]:
+              - status
+              - button "Save model" [ref=f5e56] [cursor=pointer]
+          - generic [ref=f5e57]:
+            - heading "Appearance" [level=2] [ref=f5e58]
+            - paragraph [ref=f5e59]: Applies immediately and is saved for the next launch.
+            - generic [ref=f5e60]:
+              - group "Accent" [ref=f5e61]:
+                - generic [ref=f5e63]:
+                  - button "amber" [ref=f5e64]
+                  - button "indigo" [pressed] [ref=f5e66]
+                  - button "emerald" [ref=f5e68]
+                  - button "mono" [ref=f5e70]
+              - group "Density" [ref=f5e72]:
+                - generic [ref=f5e74]:
+                  - button "comfortable" [pressed] [ref=f5e75]
+                  - button "compact" [ref=f5e76]
+              - group "Intensity" [ref=f5e77]:
+                - generic [ref=f5e79]:
+                  - button "calm" [ref=f5e80]
+                  - button "vivid" [pressed] [ref=f5e81]
+          - generic [ref=f5e82]:
+            - heading "Shortcuts" [level=2] [ref=f5e83]
+            - paragraph [ref=f5e84]: Global — inert while typing in a form field.
+            - generic [ref=f5e85]:
+              - generic [ref=f5e86]:
+                - term [ref=f5e87]:
+                  - generic [ref=f5e88]: k / ⏎
+                - definition [ref=f5e89]: keep — place the item into sources/
+              - generic [ref=f5e90]:
+                - term [ref=f5e91]:
+                  - generic [ref=f5e92]: d
+                - definition [ref=f5e93]: drop the queued candidate
+              - generic [ref=f5e94]:
+                - term [ref=f5e95]:
+                  - generic [ref=f5e96]: →
+                - definition [ref=f5e97]: skip — leave it queued, advance
+              - generic [ref=f5e98]:
+                - term [ref=f5e99]:
+                  - generic [ref=f5e100]: o
+                - definition [ref=f5e101]: open the source url
+              - generic [ref=f5e102]:
+                - term [ref=f5e103]:
+                  - generic [ref=f5e104]: u
+                - definition [ref=f5e105]: undo the last keep / drop
+              - generic [ref=f5e106]:
+                - term [ref=f5e107]:
+                  - generic [ref=f5e108]: ⇧r
+                - definition [ref=f5e109]: rescan the queue from disk
+              - generic [ref=f5e110]:
+                - term [ref=f5e111]:
+                  - generic [ref=f5e112]: g
+                - definition [ref=f5e113]: toggle recap / outline
+              - generic [ref=f5e114]:
+                - term [ref=f5e115]:
+                  - generic [ref=f5e116]: ↓
+                - definition [ref=f5e117]: select the next queued item
+              - generic [ref=f5e118]:
+                - term [ref=f5e119]:
+                  - generic [ref=f5e120]: ↑
+                - definition [ref=f5e121]: select the previous queued item
+              - generic [ref=f5e122]:
+                - term [ref=f5e123]:
+                  - generic [ref=f5e124]: r
+                - definition [ref=f5e125]: go to Review Queue
+              - generic [ref=f5e126]:
+                - term [ref=f5e127]:
+                  - generic [ref=f5e128]: f
+                - definition [ref=f5e129]: go to Feed Stats
+              - generic [ref=f5e130]:
+                - term [ref=f5e131]:
+                  - generic [ref=f5e132]: w
+                - definition [ref=f5e133]: go to the Wiki
+              - generic [ref=f5e134]:
+                - term [ref=f5e135]:
+                  - generic [ref=f5e136]: s
+                - definition [ref=f5e137]: go to Settings
+              - generic [ref=f5e138]:
+                - term [ref=f5e139]:
+                  - generic [ref=f5e140]: t
+                - definition [ref=f5e141]: toggle review ↔ stats
+  - region "Notifications alt+T"
